@@ -1,142 +1,106 @@
-# Karpov's Bookshop
+# Karpov's Tracker
 
-A full-stack **bookstore management system** built with FastAPI. The application provides complete CRUD operations for books, a modern web interface, and a rich **business analytics dashboard** with 10 predefined statistical visualizations (see [Statistics & Analytics](#statistics--analytics)) generated with Matplotlib and Seaborn.
+> A personal finance tracking application with a terminal-inspired UI, built on FastAPI and PostgreSQL.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
-- [Architecture](#architecture)
-- [Features](#features)
 - [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Environment Variables](#environment-variables)
+  - [Running the Application](#running-the-application)
 - [API Reference](#api-reference)
+- [Authentication](#authentication)
 - [Database Schema](#database-schema)
-- [Statistics & Analytics](#statistics--analytics)
-- [Frontend Pages](#frontend-pages)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
 ## Overview
 
-**Karpov's Bookshop** is a Python web application that lets users:
+Karpov's Tracker is a full-stack expense tracking web application. Users can sign up, set up an account with an opening balance, and monitor their spending through a real-time dashboard and filterable expense table. The frontend has a retro terminal aesthetic (`KARPOV_SYS v2.4.1`) served directly from a FastAPI backend using Jinja2 templates.
 
-- **Manage books** — Create, read, update, and delete books in inventory
-- **View inventory** — Browse all books in a table layout
-- **Look up details** — Fetch information for a specific book by ID
-- **Analyze business data** — Run 10 predefined statistics and view charts (average price by year, top authors by reviews, sales trends, revenue, review volume, and transaction distribution)
+---
 
-The backend is built with **FastAPI** and stores data in **SQLite**. The frontend uses vanilla HTML, CSS, and JavaScript, with Jinja2 templates for dynamic content. Analytics are powered by **Pandas**, **Matplotlib**, and **Seaborn**.
+## Features
+
+### Core
+- **Authentication** — Email/password sign-up and login via an external Neon Auth provider, with JWT-based sessions
+- **Account Setup** — Post-signup onboarding flow to capture full name and opening balance
+- **Dashboard** — Displays account balance and total expenses for the rolling last 30 days
+- **Expense Table** — Sortable, searchable table of all transactions with category and date
+- **Statistics View** — Dedicated section for financial overviews and chart-based analytics (in progress)
+
+### Included but Often Overlooked
+- **Graceful DB connection handling** — SQLAlchemy engine configured with `pool_pre_ping`, `pool_recycle`, and overflow settings to survive idle connections and serverless cold starts
+- **Scoped API versioning** — All account/book routes are prefixed under `/api/v1`, making future versioning non-breaking
+- **Custom Swagger UI path** — Docs are served at `/administrator123` instead of the default `/docs`, reducing automated scanning exposure
+- **Static file isolation** — Templates and static assets are mounted as separate StaticFiles routes, keeping the template directory browsable independently
+- **Plots directory auto-creation** — `PLOTS_DIR` is resolved relative to the server file and created on startup, preventing missing-directory errors on fresh deploys
+- **Modular router architecture** — Each domain (accounts, auth, dashboard, statistics) lives in its own router file and is registered independently in `main.py`
+- **Idiomatic HTTPException re-raising** — Service functions explicitly re-raise `HTTPException` before the generic `except` block so FastAPI error responses aren't swallowed as 500s
 
 ---
 
 ## Tech Stack
 
-| Layer       | Technology                                                |
-|------------|------------------------------------------------------------|
-| **Backend**  | FastAPI, Pydantic, SQLite                                  |
-| **Data**     | Pandas, NumPy                                              |
-| **Analytics**| Matplotlib, Seaborn                                        |
-| **Frontend** | HTML5, CSS, vanilla JavaScript, Jinja2 templates           |
-| **Server**   | Uvicorn                                                    |
+| Layer | Technology |
+|---|---|
+| Backend | FastAPI (Python) |
+| Database | PostgreSQL (via SQLAlchemy ORM) |
+| Auth Provider | Neon Auth (JWKS / JWT) |
+| Templating | Jinja2 |
+| Frontend | Vanilla JS, CSS |
+| HTTP Client | httpx (async) |
+| Config | python-dotenv |
 
 ---
 
 ## Project Structure
 
 ```
-CRUD FastAPI Frontend and Backend/
+project-root/
+│
+├── main.py                     # App entrypoint, route mounting, static files
+│
 ├── server/
-│   ├── main_server.py              # FastAPI app entry point, routes, static mounts
 │   ├── api/
-│   │   ├── __init__.py
-│   │   └── v1/
-│   │       ├── __init__.py
-│   │       ├── books_endpoints.py      # Book CRUD API
-│   │       └── statistics_endpoints.py # Statistics API
-│   ├── database/
-│   │   ├── __init__.py
-│   │   ├── databse.py                  # DB connection, loads books/sales/customer_reviews/sale_details
-│   │   └── bookstore.db                # SQLite database
-│   ├── schemas/
-│   │   ├── __init__.py
-│   │   └── book.py                     # Pydantic models (BookCreate, BookRead, BookResponse, etc.)
+│   │   ├── __init__.py         # Exports all routers
+│   │   ├── accounts_endpoints.py
+│   │   ├── authenticate_endpoints.py
+│   │   ├── dashboard_endpoints.py
+│   │   └── statistics_endpoints.py
+│   │
 │   ├── services/
-│   │   ├── __init__.py
-│   │   ├── book_service/
-│   │   │   ├── create_service/         # create_book
-│   │   │   ├── delete_service/         # delete_book
-│   │   │   ├── get_info_service/       # get_book, get_books
-│   │   │   └── update_service/         # update_details
-│   │   └── statistics/
-│   │       ├── __init__.py
-│   │       └── statistics_service.py   # 10 chart generators (reroute, average_book_price_by_year, etc.)
-│   ├── static/
-│   │   └── plots/                      # Generated chart PNGs
-│   └── templates/                      # HTML pages and assets
-│       ├── home/
-│       ├── book_storage/
-│       ├── book_info/
-│       ├── create_book/
-│       ├── update/
-│       ├── delete/
-│       └── statistics/
-│           └── statistics_graphs/
-├── requirements.txt
-└── README.md
+│   │   ├── __init__.py         # Exports all service functions
+│   │   ├── account_services.py
+│   │   └── statistics_services.py
+│   │
+│   ├── schemas/
+│   │   ├── accounts.py         # Pydantic models for accounts
+│   │   └── authentication.py   # Pydantic models for auth
+│   │
+│   ├── models.py               # SQLAlchemy ORM models
+│   └── database.py             # Engine, Base, Session factory
+│
+├── templates/
+│   ├── base.html
+│   └── home/
+│       ├── home.html
+│       ├── styles.css
+│       └── functionality.js
+│
+└── static/
+    └── plots/                  # Auto-generated on startup
 ```
-
----
-
-## Architecture
-
-The app follows a layered design:
-
-1. **Presentation (main_server.py)**  
-   - Serves HTML pages at `/`, `/storage`, `/create`, `/update`, `/delete`, `/statistics`, etc.  
-   - Mounts static files for each template directory.  
-   - Includes the API routers under `/api/v1`.
-
-2. **API (api/v1/)**  
-   - **books_endpoints.py** — REST endpoints for books: `GET/POST /api/v1/books/`, `GET/PUT/DELETE /api/v1/books/{book_id}`  
-   - **statistics_endpoints.py** — `GET /api/v1/statistics/{question_id}` for statistics views
-
-3. **Services (services/)**  
-   - **book_service** — Create, read, update, delete operations. Each action is in its own module.  
-   - **statistics** — `reroute(question_id)` maps IDs 1–10 to chart-generating functions that return PNG filenames.
-
-4. **Data (database/, schemas/)**  
-   - `database/databse.py` connects to SQLite and loads `books`, `sales`, `customer_reviews`, `sale_details` as Pandas DataFrames.  
-   - `schemas/book.py` defines Pydantic models for request/response validation.
-
-5. **Frontend (templates/)**  
-   - Static HTML/CSS/JS pages that call the FastAPI endpoints.  
-   - Statistics pages use query params (`stat_id`, `title`) and Jinja2 to render graphs.
-
----
-
-## Features
-
-### Book Management (CRUD)
-
-| Action  | Endpoint                     | Description                    |
-|---------|------------------------------|--------------------------------|
-| Create  | `POST /api/v1/books/`        | Add a new book (`type=create`) |
-| Read    | `GET /api/v1/books/`         | List all books                 |
-| Read    | `GET /api/v1/books/{id}`     | Get one book by ID             |
-| Update  | `PUT /api/v1/books/{id}`     | Update a book (`type=update_details`) |
-| Delete  | `DELETE /api/v1/books/{id}`  | Remove a book                  |
-
-### Book Schema (Create/Update)
-
-- `title`, `author`, `year`, `price`, `quantity`, `is_available`
-
-### Statistics
-
-- 10 pre-defined analytics (see [Statistics & Analytics](#statistics--analytics))  
-- Each generates a PNG chart stored in `server/static/plots/` and served to the frontend.
 
 ---
 
@@ -144,117 +108,144 @@ The app follows a layered design:
 
 ### Prerequisites
 
-- Python 3.10+
-- Virtual environment (recommended)
+- Python 3.11+
+- PostgreSQL database (local or hosted — e.g. Neon, Supabase, Railway)
+- A Neon Auth project for authentication (or a compatible JWKS/JWT provider)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone github.com/ItayKarp/Final-project-python
-cd "CRUD FastAPI Frontend and Backend"
+git clone https://github.com/your-username/karpovs-tracker.git
+cd karpovs-tracker
 
 # Create and activate a virtual environment
 python -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate
+source venv/bin/activate      # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-### Run the Server
+### Environment Variables
 
-From the project root:
+Create a `.env` file in the project root:
 
-```bash
-uvicorn server.main_server:app --reload --host 0.0.0.0 --port 8000
+```env
+# PostgreSQL connection string
+DATABASE_URL=postgresql+psycopg://user:password@host:5432/dbname
+
+# Neon Auth base URL (or your JWKS provider)
+NEON_BASE_AUTH=https://your-neon-auth-instance.com
 ```
 
-- **Local**: http://127.0.0.1:8000  
-- **API docs (Swagger)**: http://127.0.0.1:8000/administrator123  
+> **Never commit your `.env` file.** Add it to `.gitignore`.
 
-> Run from the directory that contains the `server/` folder so paths like `database/bookstore.db` and `templates/` resolve correctly.
+### Running the Application
+
+```bash
+uvicorn main:app --reload
+```
+
+The app will be available at `http://localhost:8000`.
+API documentation is at `http://localhost:8000/administrator123`.
 
 ---
 
 ## API Reference
 
-### Books API (`/api/v1/books`)
+### Authentication — `/auth`
 
-| Method   | Path           | Description          |
-|----------|----------------|----------------------|
-| `GET`    | `/`            | List all books       |
-| `GET`    | `/{book_id}`   | Get one book         |
-| `POST`   | `/`            | Create book (query: `type=create`) |
-| `PUT`    | `/{book_id}`   | Update book (query: `type=update_details`) |
-| `DELETE` | `/{book_id}`   | Delete book          |
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/auth/signup` | Register a new user via Neon Auth |
+| `POST` | `/auth/login` | Authenticate and receive a JWT token |
+| `POST` | `/auth/setup` | Create the local account record post-signup |
 
-### Statistics API (`/api/v1/statistics`)
+### Accounts — `/api/v1/books`
 
-| Method | Path              | Description                           |
-|--------|-------------------|---------------------------------------|
-| `GET`  | `/{question_id}`  | Return the statistics view for ID 1–10 |
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/books/` | List all accounts |
+| `GET` | `/api/v1/books/{account_id}` | Get a single account |
+| `POST` | `/api/v1/books/?type=create` | Create a new account |
+| `PUT` | `/api/v1/books/{account_id}?type=update_details` | Update account details |
+| `DELETE` | `/api/v1/books/{account_id}` | Delete an account |
+
+### Dashboard — `/dashboard`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/dashboard/data?email=` | Returns balance and 30-day expense total |
+| `GET` | `/dashboard/expenses?email=` | Returns full expense table for the account |
+
+---
+
+## Authentication
+
+This application uses **Neon Auth** as an external identity provider. On signup, credentials are forwarded to the Neon Auth service which returns a JWT. That token is stored client-side and used for subsequent authenticated requests.
+
+After signup, a `/auth/setup` call creates a local `Accounts` record in the application database, linking the Neon Auth user identity to the internal account by email.
+
+> The `JWKS_URL` constant in `dashboard_endpoints.py` is wired for future JWT verification middleware — this can be expanded to protect routes using FastAPI's `Depends` + `HTTPBearer`.
 
 ---
 
 ## Database Schema
 
-The SQLite database `server/database/bookstore.db` includes:
+```
+categories
+  id              INTEGER PK
+  name            VARCHAR
+  monthly_budget  NUMERIC(10,2)
 
-| Table            | Purpose                                      |
-|------------------|----------------------------------------------|
-| `books`          | Book inventory (book_id, title, author, year, price, quantity, is_available) |
-| `sales`          | Sales transactions (sale_date, total_amount, etc.) |
-| `sale_details`   | Line items per sale (book_id, quantity, etc.) |
-| `customer_reviews` | Reviews with rating, profession, review_date, etc. |
+accounts
+  id              INTEGER PK
+  account_name    VARCHAR UNIQUE NOT NULL
+  balance         NUMERIC(12,2) NOT NULL
+  email           VARCHAR UNIQUE NOT NULL
 
-The `database` module loads these into Pandas DataFrames at startup for use across services and statistics.
+expenses
+  id              INTEGER PK
+  amount          NUMERIC(10,2) NOT NULL
+  category_id     INTEGER FK → categories.id
+  account_id      INTEGER FK → accounts.id
+  description     VARCHAR
+  created_at      DATETIME
+```
 
----
+To initialise the schema against your database, run:
 
-## Statistics & Analytics
-
-The statistics service maps `question_id` (1–10) to chart generators:
-
-| ID | Metric                               | Category       |
-|----|--------------------------------------|----------------|
-| 1  | Average Book Price by Year           | Inventory      |
-| 2  | Top 10 Authors by Reviews            | User Activity  |
-| 3  | Daily Sales Trend (last 2 weeks)     | Sales Overview |
-| 4  | Top Selling Books                    | Inventory      |
-| 5  | Monthly Revenue Performance          | Sales Overview |
-| 6  | Average Rating by Profession         | User Activity  |
-| 7  | Monthly Review Volume                | User Activity  |
-| 8  | Top 10 Authors by Revenue            | Inventory      |
-| 9  | Distribution of Units per Transaction| Sales Overview |
-| 10 | Monthly Revenue Growth Rate          | Sales Overview |
-
-Each function:
-
-1. Queries and aggregates data from `books`, `sales`, `reviews`, `sale_details`  
-2. Creates a Matplotlib/Seaborn chart with a bookshop-style theme  
-3. Saves the PNG to `server/static/plots/`  
-4. Returns the filename for the frontend to display  
+```python
+from server.database import Base, engine
+Base.metadata.create_all(engine)
+```
 
 ---
 
-## Frontend Pages
+## Roadmap
 
-| Route               | Page          | Description                                   |
-|---------------------|---------------|-----------------------------------------------|
-| `/`                 | Home          | Navigation hub with video intro               |
-| `/storage`          | Book Storage  | Table of all books                            |
-| `/bookDetails`      | Book Details  | Look up a book by ID                          |
-| `/create`           | Create Book   | Form to add a new book                        |
-| `/update`           | Update Book   | Form to edit an existing book                 |
-| `/delete`           | Delete Book   | Form to remove a book                         |
-| `/statistics`       | Statistics    | Grid of 10 statistics buttons                 |
-| `/statistics/result`| Graph View    | Renders the selected statistic chart (Jinja2) |
+- [ ] JWT verification middleware on protected routes (`/dashboard`, `/api/v1`)
+- [ ] Statistics endpoints — per-category breakdowns, monthly trend charts
+- [ ] Expense creation and deletion from the UI
+- [ ] Budget tracking against `categories.monthly_budget`
+- [ ] Pagination on the expenses table endpoint
+- [ ] Dark/light theme toggle
 
-The home page includes video intros and can be skipped with the **Escape** key or when the video ends.
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch — `git checkout -b feature/your-feature`
+3. Commit your changes — `git commit -m "feat: add your feature"`
+4. Push to the branch — `git push origin feature/your-feature`
+5. Open a Pull Request
+
+Please follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
 
 ---
 
 ## License
 
-This project is for educational purposes (Final Project Python).
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details.

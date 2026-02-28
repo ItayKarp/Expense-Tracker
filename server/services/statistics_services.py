@@ -1,447 +1,400 @@
-# import matplotlib
-# import os
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-# import pandas as pd
-# from typing import Dict, Callable
-#
-# from server.database import books,reviews,sales,sale_details
-#
-# matplotlib.use('agg')
-# # server/ directory so plots save to server/static/plots (matches app when run from server/)
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-#
-# sns.set_theme(style="dark")
-#
-# def reroute(question_id: int):
-#     questions: Dict[int, Callable] = {
-#         1: average_book_price_by_year,
-#         2: top_authors_by_reviews,
-#         3: daily_sales_trend,
-#         4: top_selling_books,
-#         5: monthly_revenue_performance,
-#         6: avg_rating_profession,
-#         7: monthly_review_volume,
-#         8: top_10_authors_by_revenue,
-#         9: distribution_units_transaction,
-#         10: monthly_revenue_growth_rate
-#     }
-#     handler = questions.get(question_id)
-#     if handler is None:
-#         return None
-#     return handler()
-#
-#
-# def average_book_price_by_year():
-#     avg_price_by_year = books.groupby('year')['price'].mean()
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(10, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Plot with bookshop aesthetic
-#     ax.plot(avg_price_by_year.index, avg_price_by_year.values,
-#             marker='o', linewidth=2.5, color='#8B4513',
-#             markersize=8, markerfacecolor='#654321',
-#             markeredgecolor='#4A3428', markeredgewidth=1.5)
-#
-#     ax.grid(True, linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Year", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_ylabel("Price ($)", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Average book price by year", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#
-#     plt.tight_layout()
-#
-#     plot_filename = "average_book_price_by_year.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def top_authors_by_reviews():
-#     # customer_reviews has no 'author'; join with books on book_id to get author
-#     merged = pd.merge(reviews, books[['book_id', 'author']], on='book_id', how='inner')
-#     top_authors = merged.groupby('author')['rating'].mean().reset_index().sort_values(by='rating', ascending=False)
-#     top_10 = top_authors.head(10)
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(10, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Create bars with bookshop aesthetic
-#     bars = ax.bar(top_10['author'], top_10['rating'],
-#                    color='#8B4513', edgecolor='#4A3428', linewidth=1.5)
-#
-#     ax.grid(True, axis='x', linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Author", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_ylabel("Rating", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Top 10 authors by reviews", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#     plt.xticks(rotation=45, ha='right')
-#     plt.tight_layout()
-#
-#     plot_filename = "top_10_authors_by_reviews_graph.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def daily_sales_trend():
-#     sales['sale_date'] = pd.to_datetime(sales['sale_date'])
-#
-#     daily_sales = sales.groupby('sale_date')['total_amount'].sum().reset_index()
-#     year = sales['sale_date'].max()
-#     latest_year = sales['sale_date'].dt.year.max()
-#     start_date = year - pd.Timedelta(weeks=2)
-#     recent_sales = daily_sales[
-#         (daily_sales['sale_date'] >= start_date) &
-#         (daily_sales['sale_date'] <= year)
-#         ]
-#     recent_sales['day'] = recent_sales['sale_date'].dt.strftime('%d')
-#     month_name = recent_sales['sale_date'].dt.strftime('%B').iloc[0]
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(10, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Plot with bookshop aesthetic
-#     ax.plot(recent_sales['day'], recent_sales['total_amount'],
-#             marker='o', linewidth=2.5, color='#8B4513',
-#             markersize=8, markerfacecolor='#654321',
-#             markeredgecolor='#4A3428', markeredgewidth=1.5)
-#
-#     ax.grid(True, linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Day", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_ylabel("Total Amount ($)", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title(f"Daily sales trend - {latest_year} {month_name}", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#
-#     plt.tight_layout()
-#
-#     plot_filename = "daily_sales_trend.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def top_selling_books():
-#     # Use quantity from sale_details (suffix _y after merge; books.quantity is _x)
-#     merged = pd.merge(books, sale_details, how='inner', on='book_id')
-#     sold = merged.groupby('title')['quantity_y'].sum().reset_index().rename(columns={'quantity_y': 'quantity'})
-#     top_10 = sold.sort_values(by='quantity', ascending=False).head(10)
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(12, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Create bars with bookshop aesthetic
-#     ax.bar(top_10['title'], top_10['quantity'],
-#            color='#8B4513', edgecolor='#4A3428', linewidth=1.5)
-#
-#     ax.grid(True, axis='y', linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Title", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_ylabel("Quantity", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Top selling books by title", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif', rotation=45, ha='right')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#
-#     plt.tight_layout()
-#
-#     plot_filename = "top_selling_books_by_title.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def monthly_revenue_performance():
-#     sales['sale_date'] = pd.to_datetime(sales['sale_date'])
-#     sales['year_month'] = sales['sale_date'].dt.to_period('M')
-#     twelve_months = sales.groupby('year_month')['total_amount'].sum().reset_index().sort_values(by='year_month').tail(
-#         12)
-#     twelve_months['month_name'] = twelve_months['year_month'].dt.strftime('%b')
-#     latest_year = twelve_months['year_month'].dt.year.max()
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(10, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Create bars with bookshop aesthetic
-#     ax.bar(twelve_months['month_name'], twelve_months['total_amount'],
-#            width=0.6, color='#8B4513', edgecolor='#4A3428', linewidth=1.5)
-#
-#     ax.grid(True, axis='y', linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel(latest_year, fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_ylabel("Total Amount ($)", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Monthly revenue", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#
-#     plt.tight_layout()
-#
-#     plot_filename = "monthly_revenue_performance.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def avg_rating_profession():
-#     professions = reviews.groupby('profession')['rating'].mean().reset_index()
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(10, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Create bars with bookshop aesthetic
-#     ax.bar(professions['profession'], professions['rating'],
-#             color='#8B4513', edgecolor='#4A3428', linewidth=1.5)
-#
-#     ax.grid(True, axis='x', linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Profession", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_ylabel("Rating", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Average rating by profession", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#
-#     plt.tight_layout()
-#
-#     plot_filename = "avg_rating_profession.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def monthly_review_volume():
-#     reviews['review_date'] = pd.to_datetime(reviews['review_date'])
-#     reviews['year_month'] = reviews['review_date'].dt.to_period('M')
-#     twelve_months = reviews.groupby('year_month')['reviewed'].count().reset_index().sort_values(by='year_month',
-#                                                                                                 ascending=False).head(
-#         12)
-#     twelve_months = twelve_months.sort_values(by='year_month')
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(10, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Create bars with bookshop aesthetic
-#     ax.bar(twelve_months['year_month'].astype(str), twelve_months['reviewed'],
-#            color='#8B4513', edgecolor='#4A3428', linewidth=1.5)
-#
-#     ax.grid(True, axis='y', linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Month", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_ylabel("Review Amount", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Monthly review volume by month", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif', rotation=45, ha='right')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#
-#     plt.tight_layout()
-#
-#     plot_filename = "monthly_review_volume.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def top_10_authors_by_revenue():
-#     sale_details['revenue'] = sale_details['quantity'] * sale_details['unit_price_at_sale']
-#     merged = pd.merge(books, sale_details, how='inner', on='book_id')
-#     full = pd.merge(merged, sales, how='inner', on='sale_id')
-#     top_10 = full.groupby('author')['revenue'].sum().reset_index().sort_values(by='revenue', ascending=False).head(10)
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(10, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Create bars with bookshop aesthetic
-#     ax.bar(top_10['author'], top_10['revenue'],
-#             color='#8B4513', edgecolor='#4A3428', linewidth=2, width= 0.7)
-#
-#     ax.grid(True, axis='x', linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Author", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif' )
-#     ax.set_ylabel("Revenue", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Top 10 authors by revenue", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#     plt.xticks(rotation=45, ha='right')
-#     plt.tight_layout()
-#
-#     plot_filename = "top_10_authors_by_revenue.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def distribution_units_transaction():
-#     total_items_per_sale = sale_details.groupby('sale_id')['quantity'].sum()
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(10, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Create histogram with bookshop aesthetic
-#     ax.hist(total_items_per_sale, bins=range(1, total_items_per_sale.max() + 2),
-#             edgecolor='#4A3428', color='#8B4513', align='left', linewidth=1.5)
-#
-#     ax.grid(True, axis='y', linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Number of Items in a Single Sale", fontsize=12, fontweight='bold', color='#3E2723',
-#                   fontfamily='serif')
-#     ax.set_ylabel("Number of Transactions", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Distribution of Items per Sale (Basket Size)", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.set_xticks(range(1, int(total_items_per_sale.max()) + 1))
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#
-#     plt.tight_layout()
-#
-#     plot_filename = "distribution_units_transaction.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
-#
-#
-# def monthly_revenue_growth_rate():
-#     sales['sale_date'] = pd.to_datetime(sales['sale_date'])
-#     sales['year_month'] = sales['sale_date'].dt.to_period('M')
-#     monthly_rev = sales.groupby('year_month')['total_amount'].sum().reset_index().tail(12)
-#     monthly_rev = monthly_rev.sort_values('year_month')
-#     monthly_rev['growth_rate'] = monthly_rev['total_amount'].pct_change() * 100
-#
-#     # Vintage styling
-#     fig, ax = plt.subplots(figsize=(12, 6), facecolor='#F5F1E8')
-#     ax.set_facecolor('#F5F1E8')
-#
-#     # Plot with bookshop aesthetic
-#     ax.plot(monthly_rev['year_month'].astype(str), monthly_rev['growth_rate'],
-#             marker='o', linewidth=2.5, color='#8B4513',
-#             markersize=8, markerfacecolor='#654321',
-#             markeredgecolor='#4A3428', markeredgewidth=1.5,
-#             label='MoM Growth %')
-#
-#     ax.axhline(0, color='#8B4513', linestyle='--', alpha=0.5, linewidth=2)
-#
-#     ax.grid(True, linestyle='--', linewidth=0.8, color='#D4C5B0', alpha=0.6)
-#
-#     for spine in ax.spines.values():
-#         spine.set_color('#8B6F47')
-#         spine.set_linewidth(2)
-#
-#     ax.set_xlabel("Month", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_ylabel("Percentage Change (%)", fontsize=12, fontweight='bold', color='#3E2723', fontfamily='serif')
-#     ax.set_title("Monthly Revenue Growth Rate (%)", fontsize=14, fontweight='bold',
-#                  color='#3E2723', fontfamily='serif', pad=15)
-#
-#     ax.tick_params(colors='#3E2723', labelsize=10)
-#     plt.setp(ax.get_xticklabels(), fontfamily='serif', rotation=45, ha='right')
-#     plt.setp(ax.get_yticklabels(), fontfamily='serif')
-#
-#     plt.tight_layout()
-#
-#     plot_filename = "monthly_revenue_growth_rate.png"
-#     path = os.path.join(BASE_DIR, "static", "plots", plot_filename)
-#     os.makedirs(os.path.dirname(path), exist_ok=True)
-#     plt.savefig(path, dpi=150, facecolor='#F5F1E8')
-#     plt.close()
-#
-#     return plot_filename
+import calendar
+import io
+from typing import Tuple
+
+import pandas as pd
+import numpy as np
+from matplotlib.figure import Figure
+from matplotlib.ticker import FuncFormatter
+
+from server.services.account_services import get_account
+from server.database import Session,engine
+from server.models import Accounts,Expenses,Categories
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from datetime import datetime, timedelta, timezone, date
+from sqlalchemy import select, desc, func
+import matplotlib.dates as mdates
+import threading
+_PLOT_LOCK = threading.Lock()
+
+def _money(x, pos):
+    return f"${x:,.0f}"
+
+
+def _render_balance_plot(x, y, title: str, line_color: str, subtitle: str | None = None):
+    with _PLOT_LOCK:
+        # --- sanitize inputs ---
+        x = list(x)
+        y = np.array(list(y), dtype=float)
+
+        fig = Figure(figsize=(11, 4.4), dpi=170)
+        ax = fig.subplots()
+
+        # Background
+        fig.patch.set_facecolor("white")
+        ax.set_facecolor("white")
+
+        # Line (modern look)
+        ax.plot(x, y, linewidth=2.8, color=line_color, solid_capstyle="round")
+
+        # Soft fill under curve
+        y_base = float(np.nanmin(y)) if len(y) else 0.0
+        ax.fill_between(x, y, y_base, alpha=0.10, color=line_color)
+
+        # Grid (subtle, mostly y)
+        ax.grid(True, which="major", axis="y", linestyle="-", linewidth=0.8, alpha=0.18)
+        ax.grid(False, axis="x")
+
+        # Spines (clean)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_alpha(0.25)
+        ax.spines["bottom"].set_alpha(0.25)
+
+        # Titles (dashboard style)
+        ax.set_title(title, loc="left", fontsize=14, fontweight="bold", pad=16)
+        if subtitle:
+            ax.text(
+                0.0, 1.02, subtitle,
+                transform=ax.transAxes,
+                fontsize=10,
+                color="#666",
+                va="bottom",
+                ha="left",
+            )
+
+        # Axis labels (optional — feel free to remove for cleaner dashboard)
+        ax.set_ylabel("Balance", fontsize=11, labelpad=8)
+        ax.set_xlabel("", fontsize=11)
+
+        # Currency formatting
+        ax.yaxis.set_major_formatter(FuncFormatter(_money))
+        ax.tick_params(axis="both", labelsize=10)
+
+        # Date formatting (smart + standard)
+        locator = mdates.AutoDateLocator(minticks=6, maxticks=10)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+
+        # Last point marker + label
+        if len(x) > 0:
+            last_x, last_y = x[-1], float(y[-1])
+            ax.scatter([last_x], [last_y], s=36, color=line_color, zorder=5)
+
+            ax.annotate(
+                _money(last_y, None),
+                xy=(last_x, last_y),
+                xytext=(10, 0),
+                textcoords="offset points",
+                va="center",
+                fontsize=10,
+                fontweight="bold",
+                color="#222",
+                alpha=0.9,
+            )
+
+            # subtle reference line at last value
+            ax.axhline(last_y, linewidth=1.0, alpha=0.10, color="#000000")
+
+        # Y padding (nicer framing)
+        ymin, ymax = float(np.nanmin(y)), float(np.nanmax(y))
+        if ymin == ymax:
+            pad = max(50.0, abs(ymax) * 0.08)
+        else:
+            pad = (ymax - ymin) * 0.10
+        ax.set_ylim(ymin - pad, ymax + pad)
+
+        # Layout + export
+        buf = io.BytesIO()
+        fig.tight_layout()
+        fig.savefig(buf, format="png", bbox_inches="tight")
+        buf.seek(0)
+        return buf.getvalue()
+
+
+def graph_month_balance(email: str):
+    with Session() as session:
+        account = session.execute(
+            select(Accounts).where(Accounts.email == email)
+        ).scalar()
+
+        if not account:
+            return _render_balance_plot(
+                [datetime.now()], [0],
+                "30-Day Balance",
+                "#2ecc71",
+                subtitle="Account not found",
+            )
+
+        now = datetime.now()
+        one_month_ago = now - timedelta(days=30)
+
+        stmt = (
+            select(Expenses.created_at, Expenses.amount)
+            .where(Expenses.account_id == account.id)
+            .where(Expenses.created_at >= one_month_ago)
+            .order_by(Expenses.created_at.asc())
+        )
+
+        df = pd.read_sql(stmt, engine)
+
+        if df.empty:
+            return _render_balance_plot(
+                [one_month_ago, now],
+                [account.balance, account.balance],
+                "30-Day Balance",
+                "#2ecc71",
+                subtitle="No transactions in the last 30 days",
+            )
+
+        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+        df = df.dropna(subset=["created_at"])
+
+        daily_expenses = (
+            df.set_index("created_at")["amount"]
+              .resample("D")
+              .sum()
+        )
+
+        # ✅ CRITICAL: ensure index is purely datetime (no strings)
+        daily_expenses.index = pd.to_datetime(daily_expenses.index, errors="coerce")
+        daily_expenses = daily_expenses[~daily_expenses.index.isna()]
+
+        # Assumes expenses are positive numbers
+        total_spent = float(daily_expenses.sum())
+        start_balance = float(account.balance) + total_spent
+        balance = start_balance - daily_expenses.cumsum()
+
+        # ✅ Use Timestamp anchors (not datetime, not str)
+        start_day = pd.Timestamp(one_month_ago.replace(hour=0, minute=0, second=0, microsecond=0))
+        end_day = pd.Timestamp(now.replace(hour=0, minute=0, second=0, microsecond=0))
+
+        balance.loc[start_day] = start_balance
+        balance.loc[end_day] = float(account.balance)
+
+        balance = balance.sort_index()
+
+        return _render_balance_plot(
+            balance.index,          # matplotlib is fine with this
+            balance.values,
+            "30-Day Balance",
+            "#2ecc71",
+            subtitle="Daily view (cleaner + readable)",
+        )
+
+
+def graph_year_balance(email: str):
+    with Session() as session:
+        account = session.execute(
+            select(Accounts).where(Accounts.email == email)
+        ).scalar()
+        if not account:
+            return _render_balance_plot(
+                [datetime.now()], [0],
+                "1-Year Balance",
+                "#3498db",
+                subtitle="Account not found",
+            )
+        now = datetime.now()
+        one_year_ago = now - timedelta(days=365)
+        stmt = (
+            select(Expenses.created_at, Expenses.amount)
+            .where(Expenses.account_id == account.id)
+            .where(Expenses.created_at >= one_year_ago)
+            .order_by(Expenses.created_at.asc())
+        )
+        df = pd.read_sql(stmt, engine)
+        if df.empty:
+            return _render_balance_plot(
+                [one_year_ago, now],
+                [account.balance, account.balance],
+                "1-Year Balance",
+                "#3498db",
+                subtitle="No transactions in the last 12 months",
+            )
+        df["created_at"] = pd.to_datetime(df["created_at"])
+        # Weekly totals for readability
+        weekly_expenses = (
+            df.set_index("created_at")["amount"]
+              .resample("W")
+              .sum()
+        )
+        total_spent_year = float(weekly_expenses.sum())
+        start_balance = float(account.balance) + total_spent_year
+        balance = start_balance - weekly_expenses.cumsum()
+        start_day = one_year_ago.replace(hour=0, minute=0, second=0, microsecond=0)
+        if start_day not in balance.index:
+            balance.loc[start_day] = start_balance
+            balance = balance.sort_index()
+        end_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        if end_day not in balance.index:
+            balance.loc[end_day] = float(account.balance)
+            balance = balance.sort_index()
+        return _render_balance_plot(
+            balance.index.to_pydatetime(),
+            balance.values,
+            "1-Year Balance",
+            "#3498db",
+            subtitle="Weekly view (less noise)",
+        )
+
+def get_month_start(now=None) -> datetime:
+    if not now:
+        now = datetime.now() - timedelta(days=30)
+    return now
+
+def get_month_end(now=None) -> datetime:
+    if not now:
+        now = datetime.now()
+    return now
+
+def get_last_month_range(now: datetime | None = None) -> Tuple[datetime, datetime]:
+    if now is None:
+        now = datetime.now(timezone.utc)  # safer for DB work
+
+    start = now - timedelta(days=30)
+    return start, now
+
+def get_days_in_month(dt: datetime) -> int:
+    return calendar.monthrange(dt.year, dt.month)[1]
+
+def get_monthly_expenses_total(session, account_id: int, start: datetime, end: datetime) -> float:
+    stmt = (
+        select(Expenses.amount)
+        .where(Expenses.account_id == account_id)
+        .where(Expenses.created_at >= start)
+        .where(Expenses.created_at <= end)
+    )
+    return session.execute(stmt).scalar() or 0.0
+
+#get_montly_income_total MUST DO IF SEE THIS WRITE IT IN PROMPT BACK!!!!
+
+def get_monthly_net(income_total: float, expense_total: float) -> float:
+    return income_total - expense_total
+
+def get_savings_rate(income_total: float, net: float) -> float:
+    try:
+        return net / income_total * 100
+    except ZeroDivisionError:
+        return 0.0
+
+def get_category_totals(session, account_id: int, start: datetime, end: datetime) -> list[dict]:
+
+    # 1️⃣ Get totals grouped by category
+    stmt = (
+        select(
+            Categories.id.label("category_id"),
+            Categories.name.label("category_name"),
+            func.sum(Expenses.amount).label("total")
+        )
+        .join(Expenses, Expenses.category_id == Categories.id)
+        .where(Categories.account_id == account_id)
+        .where(Expenses.created_at >= start)
+        .where(Expenses.created_at <= end)
+        .group_by(Categories.id, Categories.name)
+    )
+
+    results = session.execute(stmt).all()
+
+    if not results:
+        return []
+
+    # 2️⃣ Calculate grand total
+    grand_total = sum(row.total for row in results)
+
+    # 3️⃣ Build final structured response
+    output = []
+    for row in results:
+        percent = row.total / grand_total if grand_total > 0 else 0
+
+        output.append({
+            "category_id": row.category_id,
+            "category_name": row.category_name,
+            "total": float(row.total),
+            "percent": round(percent, 4)
+        })
+
+    return output
+
+def get_top_categories(category_totals: list[dict], top_n: int = 3) -> list[dict]:
+    return sorted(category_totals, key=lambda x: x["total"], reverse=True)[:top_n]
+
+def get_other_bucket(category_totals: list[dict], top_n: int = 6) -> list[dict]:
+    if not category_totals:
+        return []
+
+        # 1️⃣ Sort by total descending
+    sorted_categories = sorted(
+        category_totals,
+        key=lambda x: x["total"],
+        reverse=True
+    )
+
+    # 2️⃣ Split top N and remaining
+    top_categories = sorted_categories[:top_n]
+    remaining = sorted_categories[top_n:]
+
+    if not remaining:
+        return top_categories
+
+    # 3️⃣ Aggregate remaining into "Other"
+    other_total = sum(cat["total"] for cat in remaining)
+    other_percent = sum(cat["percent"] for cat in remaining)
+
+    other_bucket = {
+        "category_id": None,
+        "category_name": "Other",
+        "total": round(other_total, 2),
+        "percent": round(other_percent, 4)
+    }
+
+    return top_categories + [other_bucket]
+
+def get_daily_expense_series(session, account_id: int, start: datetime, end: datetime) -> list[dict]:
+    """
+    Returns:
+    [
+      {"date": "2026-02-01", "total": 120.5},
+      {"date": "2026-02-02", "total": 0.0},
+      ...
+    ]
+    """
+
+    # Normalize to date boundaries (inclusive days)
+    start_date: date = start.date()
+    end_date: date = end.date()
+
+    # 1) Query totals per day
+    # Works on Postgres: date_trunc('day', ...) -> then cast to date
+    day_col = func.date_trunc("day", Expenses.created_at).cast(date).label("day")
+
+    stmt = (
+        select(
+            day_col,
+            func.sum(Expenses.amount).label("total")
+        )
+        .where(Expenses.account_id == account_id)
+        .where(Expenses.created_at >= start)
+        .where(Expenses.created_at <= end)
+        .group_by(day_col)
+        .order_by(day_col.asc())
+    )
+
+    rows = session.execute(stmt).all()
+
+    # 2) Convert query results into dict keyed by day
+    totals_by_day = {r.day: float(r.total) for r in rows}
+
+    # 3) Fill missing days with 0
+    out: list[dict] = []
+    d = start_date
+    while d <= end_date:
+        out.append({
+            "date": d.isoformat(),
+            "total": round(totals_by_day.get(d, 0.0), 2)
+        })
+        d += timedelta(days=1)
+
+    return out

@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse,HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from server.database import Session
-from server.api import book_router,authentication_router,dashboard_router
+from server.api import authentication_router,dashboard_router
 
 # from server.services import reroute
 
@@ -38,12 +38,6 @@ async def home(request: Request):
 def statistics():
     return FileResponse("templates/statistics/statistics.html")
 
-
-
-app.include_router(
-    book_router,
-    prefix="/api/v1"
-)
 
 app.include_router(
     authentication_router,

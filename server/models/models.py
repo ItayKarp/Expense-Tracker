@@ -9,6 +9,7 @@ class Categories(Base):
     id             = Column(Integer, primary_key=True, autoincrement=True)
     name           = Column(String)
     monthly_budget = Column(Numeric(10, 2))
+    account_id     = Column(Integer, ForeignKey("accounts.id"))
 
 
 class Accounts(Base):

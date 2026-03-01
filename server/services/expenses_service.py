@@ -20,7 +20,7 @@ def create_expenses(email:str, expense: CreateExpense) -> Dict[str, str]:
             account = session.query(Accounts).filter(Accounts.email == email).first()
             if account is None:
                 raise HTTPException(status_code=404, detail="Account not found")
-            category_id = session.query(Categories.id).filter(expense.category == Categories.name).scalar()
+            category_id = session.query(Categories.id).filter(expense.category == Categories.name).filter(Categories.account_id == account.id).scalar()
             new_expense = Expenses(account_id=account.id, description=expense.description, amount=expense.amount, category_id=category_id)
             session.add(new_expense)
             account.balance -= expense.amount

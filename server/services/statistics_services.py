@@ -4,6 +4,7 @@ from typing import Tuple
 
 import pandas as pd
 import numpy as np
+from dateutil.relativedelta import relativedelta
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
 
@@ -262,12 +263,12 @@ def get_days_in_month(dt: datetime) -> int:
 
 def get_monthly_expenses_total(session, account_id: int, start: datetime, end: datetime) -> float:
     stmt = (
-        select(Expenses.amount)
+        select(func.coalesce(func.sum(Expenses.amount), 0.0))
         .where(Expenses.account_id == account_id)
         .where(Expenses.created_at >= start)
-        .where(Expenses.created_at <= end)
+        .where(Expenses.created_at < end)
     )
-    return session.execute(stmt).scalar() or 0.0
+    return float(session.execute(stmt).scalar_one())
 
 #get_montly_income_total MUST DO IF SEE THIS WRITE IT IN PROMPT BACK!!!!
 
@@ -398,3 +399,116 @@ def get_daily_expense_series(session, account_id: int, start: datetime, end: dat
         d += timedelta(days=1)
 
     return out
+
+
+def get_last_month_total(session, account_id: int, now=None) -> float:
+    now = now or datetime.now()
+    first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    first_of_last_month = first_of_this_month - relativedelta(months=1)
+    end_of_last_month = first_of_this_month
+    return get_monthly_expenses_total(session, account_id,first_of_last_month,end_of_last_month)
+
+
+def get_percent_change(current: float, previous: float) -> float:
+    if previous == 0:
+        if current == 0:
+            return 0.0
+        return 1.0  # Treat as 100% increase
+
+    return (current - previous) / previous
+
+
+def get_month_to_date_expenses(session, account_id: int, month_start: datetime, now: datetime) -> float:
+    stmt = (
+        select(func.coalesce(func.sum(Expenses.amount), 0.0))
+        .where(Expenses.account_id == account_id)
+        .where(Expenses.created_at >= month_start)
+        .where(Expenses.created_at < now)
+        .order_by(Expenses.created_at.asc())
+    )
+    return float(session.execute(stmt).scalar_one())
+
+
+def get_daily_average(total_so_far: float, days_passed: int) -> float:
+    return total_so_far / days_passed if days_passed > 0 else 0.0
+
+
+def get_month_projection(daily_avg: float, days_in_month: int) -> float:
+    return daily_avg * days_in_month
+
+
+def _month_bounds(now: datetime) -> tuple[datetime, datetime]:
+    """Calendar month [start, end) bounds for the month containing `now`."""
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    end = start + relativedelta(months=1)
+    return start, end
+
+
+def build_core_dashboard(session, email: str, now=None) -> dict:
+    now = now or datetime.now()
+    account = get_account(session, email)
+    if not account:
+        return {
+            "balance": 0.0,
+            "month": {
+                "income": 0.0,
+                "expenses": 0.0,
+                "net": 0.0,
+                "savings_rate": 0.0,
+                "vs_last_month_percent": 0.0,
+            },
+            "categories": [],
+            "trend": [],
+            "projection": {"daily_avg": 0.0, "projected_month_total": 0.0},
+        }
+
+    month_start, month_end = _month_bounds(now)
+
+    income_total = 0.0
+
+    expense_total_mtd = get_month_to_date_expenses(session, account.id, month_start, now)
+    net = get_monthly_net(income_total, expense_total_mtd)
+    savings_rate = get_savings_rate(income_total, net)
+
+    # Compare month-to-date spending vs *full* last month spending (simple + useful default)
+    last_month_total = get_last_month_total(session, account.id, now=now)
+    vs_last_month_percent = get_percent_change(expense_total_mtd, last_month_total)
+
+    # --- Categories (month-to-date) ---
+    category_totals = get_category_totals(session, account.id, month_start, now)
+    categories = get_other_bucket(category_totals, top_n=6)  # top 6 + "Other" bucket
+
+    # --- Trend (daily expenses for current month-to-date) ---
+    trend = get_daily_expense_series(session, account.id, month_start, now)
+
+    # --- Projection ---
+    days_passed = max(1, (now.date() - month_start.date()).days + 1)  # include today
+    daily_avg = get_daily_average(expense_total_mtd, days_passed)
+    days_in_month = get_days_in_month(now)
+    projected_month_total = get_month_projection(daily_avg, days_in_month)
+
+    return {
+        "balance": float(account.balance),
+        "month": {
+            "income": float(income_total),
+            "expenses": float(expense_total_mtd),
+            "net": float(net),
+            "savings_rate": float(savings_rate),
+            # keep as ratio (e.g. 0.12) like your helper returns, OR multiply by 100 if you prefer.
+            "vs_last_month_percent": float(vs_last_month_percent),
+        },
+        "categories": categories,
+        "trend": trend,
+        "projection": {
+            "daily_avg": float(round(daily_avg, 2)),
+            "projected_month_total": float(round(projected_month_total, 2)),
+        },
+    }
+
+def get_dashboard_cache_key(account_id: int, month_start: datetime) -> str:
+    """
+    Stable key per account + calendar month.
+    Example: dashboard:v1:acc:123:month:2026-03-01
+    """
+    range = get_last_month_range(month_start)
+    return f"dashboard:v1:acc:{account_id}:month:{range[0].date().isoformat()}"

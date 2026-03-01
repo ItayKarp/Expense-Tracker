@@ -4,9 +4,8 @@ from fastapi.responses import FileResponse,HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from server.database import Session
-from server.api import authentication_router,dashboard_router
+from server.api import authentication_router, dashboard_router, statistics_router
 
-# from server.services import reroute
 
 # Resolve plots dir relative to this file so save and serve use the same path
 _SERVER_DIR = Path(__file__).resolve().parent
@@ -34,11 +33,6 @@ async def home(request: Request):
     return templates.TemplateResponse("home/home.html", {"request": request})
 
 
-@app.get("/statistics")
-def statistics():
-    return FileResponse("templates/statistics/statistics.html")
-
-
 app.include_router(
     authentication_router,
     prefix="/auth"
@@ -49,8 +43,9 @@ app.include_router(
     prefix="/dashboard"
 )
 
-#
-# app.include_router(
-#     statistics_router,
-#     prefix="/api/v1"
-# )
+
+app.include_router(
+    statistics_router,
+    prefix="/api/v1/statistics",
+    tags=["Statistics"]
+)

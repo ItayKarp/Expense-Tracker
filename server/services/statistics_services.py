@@ -446,7 +446,7 @@ def _month_bounds(now: datetime) -> tuple[datetime, datetime]:
 
 def build_core_dashboard(session, email: str, now=None) -> dict:
     now = now or datetime.now()
-    account = get_account(session, email)
+    account = get_account(email, session)
     if not account:
         return {
             "balance": 0.0,

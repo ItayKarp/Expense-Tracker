@@ -75,13 +75,16 @@ export async function apiFetchAllExpenses(email) {
     return { response, data };
 }
 
-export async function apiFetchStatistics() {
-    const response = await fetch("/statistics", {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${getToken()}` }
-    });
-    const data = await response.json();
-    return { response, data };
+export async function apiFetchStatistics(email) {
+  const response = await fetch(
+    `/statistics/dashboard/core?email=${encodeURIComponent(email)}`,
+    {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${getToken()}` }
+    }
+  );
+  const data = await response.json();
+  return { response, data };
 }
 
 export async function apiFetchCategories(email) {

@@ -58,4 +58,5 @@ def dashboard_init_data(email):
             "account_name": account.account_name,
             "balance": account.balance,
             "monthly_expenses": monthly_total,
+            "salary": account.salary
         }

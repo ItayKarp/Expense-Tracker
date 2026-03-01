@@ -1,13 +1,12 @@
-from sqlalchemy import func
-from fastapi import APIRouter, Response, Depends
+from fastapi import APIRouter, Response
 from fastapi.security import HTTPBearer
 import os
 from dotenv import load_dotenv
 
-from server.schemas import UpdateExpenses, CreateCategory,CreateExpense
-from server.schemas.expenses import DeleteExpense
+from server.schemas import UpdateExpenses, CreateCategory,CreateExpense, UpdateProfileRequest,DeleteExpense
 from server.services import get_expenses, dashboard_init_data, delete_expense as del_expense, \
-    get_monthly_expenses, get_yearly_expenses, get_categories, update_expense_details, create_category,create_expenses,graph_month_balance,graph_year_balance
+    get_monthly_expenses, get_yearly_expenses, get_categories, update_expense_details, create_category, \
+    create_expenses,graph_month_balance,graph_year_balance, update_profile_details
 
 load_dotenv()
 
@@ -71,3 +70,13 @@ def month_balance_graph(email: str):
 def year_balance_graph(email: str):
     image_bytes = graph_year_balance(email)
     return Response(content=image_bytes, media_type="image/png")
+
+
+@dashboard_router.put("/profile")
+def update_profile(payload: UpdateProfileRequest):
+    return update_profile_details(
+        old_email=payload.old_email,
+        full_name=payload.full_name,
+        email=payload.email,
+        salary=payload.salary
+    )

@@ -25,7 +25,7 @@ function getExpenseId(exp) {
     return raw !== null ? parseInt(raw, 10) : null;
 }
 
-function getEmail() {
+export function getEmail() {
     return JSON.parse(localStorage.getItem("user"))?.email;
 }
 

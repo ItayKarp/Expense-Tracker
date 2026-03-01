@@ -183,3 +183,57 @@ export async function apiFetchYearBalanceGraph(email) {
   const blob = await response.blob();
   return { response, blob };
 }
+
+export async function apiUpdateProfileDetails(old_email, full_name, email, salary) {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch("/dashboard/profile", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      old_email,     // backend can use this to locate the account
+      full_name,     // update fields
+      email,
+      salary,
+    }),
+  });
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+
+  if (!res.ok) {
+    // make FastAPI errors readable
+    throw new Error(typeof data === "string" ? data : JSON.stringify(data));
+  }
+
+  return data;
+}
+
+export async function apiRequestPasswordReset(email, redirectTo) {
+  const res = await fetch(`/auth/request-password-reset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, redirectTo }),
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+}
+
+export async function apiResetPassword(token, newPassword) {
+  const res = await fetch(`/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, newPassword }),
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+}

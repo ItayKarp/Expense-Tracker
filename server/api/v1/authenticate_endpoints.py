@@ -2,7 +2,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from server.models import Accounts
 from server.database import Session
-from server.schemas import SignupRequest, LoginRequest, SetupRequest
+from server.schemas import SignupRequest, LoginRequest, SetupRequest, RequestPasswordReset, ResetPassword
 from dotenv import load_dotenv
 import os
 load_dotenv()
@@ -62,3 +62,41 @@ async def setup(body: SetupRequest):
             raise HTTPException(status_code=500, detail=f"Failed to create account: {str(e)}")
 
 
+@authentication_router.post("/request-password-reset")
+async def request_password_reset(payload: RequestPasswordReset, request: Request):
+    """
+    Sends a reset email to the user via Neon Auth / Better Auth.
+    """
+    base = os.getenv("NEON_BASE_AUTH")
+    if not base:
+        raise HTTPException(status_code=500, detail="NEON_BASE_AUTH is not set")
+
+    url = f"{base}/auth/request-password-reset"
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        r = await client.post(
+            url,
+            json=payload.model_dump(),
+            headers={"Origin": str(request.base_url).rstrip("/")},
+        )
+        if r.status_code >= 400:
+            raise HTTPException(status_code=r.status_code, detail=r.text)
+        return r.json()
+
+
+@authentication_router.post("/reset-password")
+async def reset_password(payload: ResetPassword):
+    """
+    Resets password using the token provided in the email link.
+    """
+    base = os.getenv("NEON_BASE_AUTH")
+    if not base:
+        raise HTTPException(status_code=500, detail="NEON_BASE_AUTH is not set")
+
+    url = f"{base}/auth/reset-password"
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        r = await client.post(url, json=payload.model_dump())
+        if r.status_code >= 400:
+            raise HTTPException(status_code=r.status_code, detail=r.text)
+        return r.json()

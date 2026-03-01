@@ -56,3 +56,46 @@
 }
 
 .primary-btn:hover { opacity: 0.75; }
+
+.profile-section-title {
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.profile-hint {
+  margin: 0 0 14px 0;
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.profile-divider {
+  margin: 22px 0;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.profile-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.profile-status {
+  margin: 10px 0 14px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  display: block;
+}
+
+.profile-status.ok {
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.25);
+}
+
+.profile-status.err {
+  background: rgba(231, 76, 60, 0.12);
+  border: 1px solid rgba(231, 76, 60, 0.25);
+}

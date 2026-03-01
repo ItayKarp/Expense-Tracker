@@ -198,6 +198,8 @@ function initNavButtons() {
                 const emailEl = document.getElementById("profile-email");
                 if (nameEl) nameEl.value = user.full_name || user.name || "";
                 if (emailEl) emailEl.value = email || "";
+                const salEl = document.getElementById("profile-salary");
+                if (salEl) salEl.value = user.salary ?? "";
             }
         }
         else if (btn.id === "logout-btn") {

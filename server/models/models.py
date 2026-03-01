@@ -19,6 +19,7 @@ class Accounts(Base):
     account_name = Column(String,unique=True, nullable=False)
     balance      = Column(Numeric(12, 2), nullable=False)
     email        = Column(String,unique=True, nullable=False)
+    salary       = Column(Numeric(12, 2))
 
 
 class Expenses(Base):

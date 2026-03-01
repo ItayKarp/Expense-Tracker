@@ -12,6 +12,29 @@ export function fmt(n) {
   });
 }
 
+
+// --- NAVBAR HELPERS ---
+function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+export function setNavbarSalary(salary) {
+  const el = document.getElementById("balance-salary");
+  if (!el) return;
+
+  let value = salary;
+  if (value === undefined || value === null || value === "") {
+    value = getUser()?.salary ?? 0;
+  }
+
+  const num = Number(value);
+  el.textContent = `$${Number.isFinite(num) ? num.toLocaleString() : "0"}`;
+}
+
 // ── VIEW SWITCHER ──────────────────────────────────────────
 export function switchView(viewId) {
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
@@ -141,6 +164,7 @@ export function showDashboard(email) {
   const overlay = document.querySelector(".screen-overlay");
   overlay.style.transition = "opacity 0.5s ease";
   overlay.style.opacity    = "0";
+  setNavbarSalary(); // pulls from localStorage.user.salary
 
   setTimeout(() => {
     overlay.style.display = "none";

@@ -1,13 +1,12 @@
 from pathlib import Path
 from fastapi import FastAPI,Request
-from fastapi.responses import FileResponse,HTMLResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from server.database import Session
 from server.api import authentication_router, dashboard_router, statistics_router
 
 
-# Resolve plots dir relative to this file so save and serve use the same path
+# Resolve plots dir relative to this file, so save and serve use the same path
 _SERVER_DIR = Path(__file__).resolve().parent
 PLOTS_DIR = _SERVER_DIR / "static" / "plots"
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -15,11 +14,8 @@ PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 templates = Jinja2Templates(directory="templates")
 
 
-def get_db():
-    db = Session
-
 app = FastAPI(
-    title="Book Library API",
+    title="Expenses Tracking API",
     version="1.0.0",
     docs_url="/administrator123"
 )

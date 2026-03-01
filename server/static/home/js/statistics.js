@@ -1,9 +1,17 @@
 import { apiFetchStatistics } from "./api.js";
-import { switchView } from "./ui.js";
+import { switchView, setNavbarSalary } from "./ui.js";
 
 function money(n) {
   const x = Number(n || 0);
   return x.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
 }
 
 function renderStats(payload) {
@@ -36,35 +44,50 @@ function renderStats(payload) {
   cats.innerHTML = `
     <h3>Top categories</h3>
     <div>
-      ${categories.length ? categories.map(c =>
-        `<div style="display:flex;justify-content:space-between;max-width:520px">
+      ${
+        categories.length
+          ? categories
+              .map(
+                (c) => `
+        <div style="display:flex;justify-content:space-between;max-width:520px">
           <span>${c.category_name}</span>
           <span>$${money(c.total)} (${money((c.percent || 0) * 100)}%)</span>
         </div>`
-      ).join("") : "<div>No category data yet.</div>"}
+              )
+              .join("")
+          : "<div>No category data yet.</div>"
+      }
     </div>
   `;
 
   trend.innerHTML = `
     <h3>Trend (MTD daily totals)</h3>
     <div style="font-size:11px;color:#666;max-width:720px">
-      ${series.length ? series.slice(-14).map(d =>
-        `<div style="display:flex;justify-content:space-between">
+      ${
+        series.length
+          ? series
+              .slice(-14)
+              .map(
+                (d) => `
+        <div style="display:flex;justify-content:space-between">
           <span>${d.date}</span><span>$${money(d.total)}</span>
         </div>`
-      ).join("") : "<div>No trend data yet.</div>"}
+              )
+              .join("")
+          : "<div>No trend data yet.</div>"
+      }
       <div style="margin-top:8px;color:#888">Showing last 14 days.</div>
     </div>
   `;
 }
 
 async function loadStatistics() {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user = getUser() || {};
   const email = user?.email;
 
   const snap = document.getElementById("stats-snapshot");
   if (!email) {
-    snap.innerHTML = "> ERR: NO USER EMAIL";
+    snap.textContent = "> ERR: NO USER EMAIL";
     return;
   }
 
@@ -72,11 +95,24 @@ async function loadStatistics() {
 
   try {
     const { response, data } = await apiFetchStatistics(email);
+
     if (!response.ok) {
-      snap.textContent = `> ERR: ${data.detail || "FAILED TO LOAD"}`.toUpperCase();
+      snap.textContent = `> ERR: ${data?.detail || "FAILED TO LOAD"}`.toUpperCase();
       return;
     }
+
     renderStats(data);
+
+    // ✅ Update navbar salary (prefer API salary if present, else ui.js falls back to localStorage)
+    setNavbarSalary(data?.salary);
+
+    // ✅ Optional: persist salary from API into localStorage.user.salary
+    if (data?.salary !== undefined && data?.salary !== null && data?.salary !== "") {
+      try {
+        const prev = JSON.parse(localStorage.getItem("user") || "{}");
+        localStorage.setItem("user", JSON.stringify({ ...prev, salary: data.salary }));
+      } catch {}
+    }
   } catch {
     snap.textContent = "> ERR: CONNECTION FAILED";
   }

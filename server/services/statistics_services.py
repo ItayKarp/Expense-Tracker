@@ -7,7 +7,7 @@ import numpy as np
 from dateutil.relativedelta import relativedelta
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
-
+import json
 from server.services.account_services import get_account
 from server.database import Session,engine
 from server.models import Accounts,Expenses,Categories
@@ -505,10 +505,151 @@ def build_core_dashboard(session, email: str, now=None) -> dict:
         },
     }
 
+
+def _month_start(dt: datetime) -> datetime:
+    return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
 def get_dashboard_cache_key(account_id: int, month_start: datetime) -> str:
     """
     Stable key per account + calendar month.
     Example: dashboard:v1:acc:123:month:2026-03-01
     """
-    range = get_last_month_range(month_start)
-    return f"dashboard:v1:acc:{account_id}:month:{range[0].date().isoformat()}"
+    ms = _month_start(month_start)
+    return f"dashboard:v1:acc:{account_id}:month:{ms.date().isoformat()}"
+
+def _cache_get(cache, key: str):
+    if cache is None:
+        return None
+
+    # dict-like
+    if hasattr(cache, "get"):
+        try:
+            return cache.get(key)
+        except TypeError:
+            # some caches have get(key, default) but that's fine; ignore
+            return cache.get(key)
+
+    # redis-like
+    try:
+        return cache[key]
+    except Exception:
+        return None
+
+
+def _cache_set(cache, key: str, value, ttl_seconds: int | None = None):
+    if cache is None:
+        return
+
+    # common cache interface: set(key, value, timeout=ttl)
+    if hasattr(cache, "set"):
+        try:
+            # Django-style: timeout=
+            if ttl_seconds is not None:
+                cache.set(key, value, timeout=ttl_seconds)
+            else:
+                cache.set(key, value)
+            return
+        except TypeError:
+            # redis-py style: set(name, value, ex=ttl)
+            if ttl_seconds is not None:
+                cache.set(key, value, ex=ttl_seconds)
+            else:
+                cache.set(key, value)
+            return
+
+    # dict-like fallback
+    try:
+        cache[key] = value
+    except Exception:
+        pass
+
+
+def _cache_delete(cache, key: str):
+    if cache is None:
+        return
+
+    if hasattr(cache, "delete"):
+        try:
+            cache.delete(key)
+            return
+        except Exception:
+            pass
+
+    # dict-like
+    if hasattr(cache, "pop"):
+        try:
+            cache.pop(key, None)
+            return
+        except Exception:
+            pass
+
+    try:
+        del cache[key]
+    except Exception:
+        pass
+
+
+def get_cached_dashboard(cache, key: str) -> dict | None:
+    """
+    Returns the cached payload (dict) or None.
+
+    Supports:
+    - caches storing dict directly
+    - caches storing JSON bytes/str
+    """
+    raw = _cache_get(cache, key)
+    if raw is None:
+        return None
+
+    # Already a dict
+    if isinstance(raw, dict):
+        return raw
+
+    # Redis often returns bytes
+    if isinstance(raw, (bytes, bytearray)):
+        try:
+            raw = raw.decode("utf-8")
+        except Exception:
+            return None
+
+        # JSON string
+        if isinstance(raw, str):
+            try:
+                val = json.loads(raw)
+                return val if isinstance(val, dict) else None
+            except Exception:
+                return None
+
+        # Unknown type
+        return None
+
+
+def set_cached_dashboard(cache, key: str, payload: dict, ttl_seconds: int = 300) -> None:
+    """
+    Stores payload in cache for ttl_seconds.
+
+    If your cache backend supports dicts, we store dict directly.
+    If it prefers string/bytes (e.g., Redis), JSON-serialize is also fine.
+    """
+    # Prefer storing dict directly; if backend can’t handle it, switch to JSON.
+    try:
+        _cache_set(cache, key, payload, ttl_seconds=ttl_seconds)
+    except Exception:
+        _cache_set(cache, key, json.dumps(payload, separators=(",", ":")), ttl_seconds=ttl_seconds)
+
+
+def invalidate_dashboard_cache(cache, account_id: int, now=None) -> None:
+    """
+    Call this when you add/update/delete an expense/income.
+
+    We invalidate:
+    - current month cache (obvious)
+    - previous month cache (protects comparisons like vs_last_month)
+    """
+    now = now or datetime.now()
+    current_ms = _month_start(now)
+    prev_ms = _month_start(now - relativedelta(months=1))
+
+    _cache_delete(cache, get_dashboard_cache_key(account_id, current_ms))
+    _cache_delete(cache, get_dashboard_cache_key(account_id, prev_ms))

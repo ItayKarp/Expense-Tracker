@@ -3,204 +3,37 @@
 {% block title %}Karpov's Tracker — Login{% endblock %}
 
 {% block styles %}
-    <link rel="stylesheet" href="/templates/home/styles.css">
+    <link rel="stylesheet" href="/static/home/css/main.css">
 {% endblock %}
 
 {% block content %}
     <div class="screen-overlay">
         <div class="terminal">
-
             <div class="terminal-header">
                 KARPOV_SYS v2.4.1 <span>// READY</span>
             </div>
-
             <div class="form-title" id="form-title">SIGN_IN<span class="cursor">█</span></div>
 
-            <!-- LOGIN FORM (shown first) -->
-            <form id="login-form" class="auth-form active" action="">
-                <div class="field-row">
-                    <span class="prompt">&gt; MAIL_:</span>
-                    <input type="email" id="login-email" placeholder="user@domain.com" autocomplete="off">
-                </div>
-                <div class="field-row">
-                    <span class="prompt">&gt; PASS_:</span>
-                    <input type="password" id="login-password" placeholder="••••••••">
-                </div>
-                <div class="status-line" id="login-status"></div>
-                <button type="submit" id="submit-login" class="btn-submit">[ ENTER ]</button>
-                <div class="toggle-row">
-                    <span>No account?</span>
-                    <button type="button" id="to-signup" class="toggle-btn">REGISTER_NOW</button>
-                </div>
-            </form>
-
-            <!-- SIGNUP FORM (hidden by default) -->
-            <form id="signup-form" class="auth-form" action="">
-                <div class="field-row">
-                    <span class="prompt">&gt; NAME_:</span>
-                    <input type="text" id="name" placeholder="your_name" autocomplete="off">
-                </div>
-                <div class="field-row">
-                    <span class="prompt">&gt; MAIL_:</span>
-                    <input type="email" id="email" placeholder="user@domain.com" autocomplete="off">
-                </div>
-                <div class="field-row">
-                    <span class="prompt">&gt; PASS_:</span>
-                    <input type="password" id="password" placeholder="••••••••">
-                </div>
-                <div class="status-line" id="signup-status"></div>
-                <button type="submit" id="submit-signup" class="btn-submit">[ CREATE ]</button>
-                <div class="toggle-row">
-                    <span>Have an account?</span>
-                    <button type="button" id="to-login" class="toggle-btn">SIGN_IN</button>
-                </div>
-            </form>
-            <div id="post-signup" style="display:none">
-                <div class="terminal-body">
-                    <div class="terminal-content">
-                        <h1>Welcome, <span id="new-username"></span>!</h1>
-                        <p>Your account has been successfully created.</p>
-                        <p>We'll need a few details about you to start</p>
-                        <form id="new-details">
-                            <p id="balance-p">How much money are you moving into your account?</p>
-                            <input type="number" id="balance" placeholder="Balance">
-                            <input type="text" id="Full-name" placeholder="Full Name">
-                            <input type="text" id="new-email" placeholder="Email">
-                            <button type="submit" id="submit-new-details" class="btn-submit">[ ENTER ]</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+            {% include "home/partials/terminal_login.html" %}
+            {% include "home/partials/terminal_signup.html" %}
+            {% include "home/partials/post_signup.html" %}
         </div>
     </div>
 
-    <!-- app-container is now a SIBLING of screen-overlay, not a child -->
     <div id="app-container" class="app-container" style="display:none">
-        <div class="app-navbar">
-            <div class="logo">Karpov's Tracker</div>
-
-            <div class="nav-right">
-                <div class="mini-stats">
-                    <div class="mini-card">
-                        <span class="mini-label">Balance</span>
-                        <span id="balance-display" class="mini-value">$0.00</span>
-                    </div>
-                    <div class="mini-card">
-                        <span class="mini-label">Last Month</span>
-                        <span id="expenses-display" class="mini-value">$0.00</span>
-                    </div>
-                </div>
-
-                <button id="profile-btn" class="nav-btn">Profile</button>
-                <button id="logout-btn" class="nav-btn">Logout</button>
-            </div>
-        </div>
-
+        {% include "home/partials/navbar.html" %}
         <div class="app-body">
-            <!-- LEFT SIDEBAR -->
-            <aside class="app-sidebar">
-                <nav class="sidebar-nav">
-                    <button class="sidebar-btn active" data-view="dashboard-view">
-                        <span class="sidebar-icon">⌂</span>
-                        <span>Dashboard</span>
-                    </button>
-                    <button class="sidebar-btn" id="expenses" data-view="expenses-view">
-                        <span class="sidebar-icon">≡</span>
-                        <span>Expenses</span>
-                    </button>
-                    <button class="sidebar-btn" id="statistics" data-view="statistics-view">
-                        <span class="sidebar-icon">◈</span>
-                        <span>Statistics</span>
-                    </button>
-                </nav>
-            </aside>
-
-            <!-- MAIN CONTENT -->
+            {% include "home/partials/sidebar.html" %}
             <div class="app-content">
-                <div id="dashboard-view" class="view active">
-                    <h1>Welcome, <span id="username"></span></h1>
-                    <p class="subtitle">Manage your finances effortlessly.</p>
-                </div>
-
-                <!-- EXPENSES VIEW -->
-                <div id="expenses-view" class="view">
-                    <div class="view-header">
-                        <div>
-                            <h1>Expenses</h1>
-                            <p class="subtitle">All transactions linked to your account.</p>
-                        </div>
-                        <div class="expenses-controls">
-                            <input type="text" id="expense-search" class="search-input" placeholder="Search expenses...">
-                        </div>
-                    </div>
-
-                    <div id="expenses-status" class="expenses-status"></div>
-
-                    <div class="table-wrapper">
-                        <table class="expenses-table" id="expenses-table">
-                            <thead>
-                                <tr>
-                                    <th data-col="date" class="sortable sort-desc">Date <span class="sort-icon">↓</span></th>
-                                    <th data-col="description" class="sortable">Description <span class="sort-icon">↕</span></th>
-                                    <th data-col="category" class="sortable">Category <span class="sort-icon">↕</span></th>
-                                    <th data-col="amount" class="sortable">Amount <span class="sort-icon">↕</span></th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="expenses-tbody">
-                                <tr class="table-empty-row">
-                                    <td colspan="5">Loading expenses...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="table-footer">
-                        <span id="expenses-count" class="expenses-count"></span>
-                        <span id="expenses-total" class="expenses-total"></span>
-                    </div>
-                </div>
-
-                <!-- STATISTICS VIEW -->
-                <div id="statistics-view" class="view">
-                    <h1>Statistics</h1>
-                    <p class="subtitle">Your financial overview.</p>
-                    <div id="statistics-content" class="statistics-content"></div>
-                </div>
-
-                <div id="profile-view" class="view">
-                    <h1>Your Profile</h1>
-                    <div class="profile-card">
-                        <div class="profile-grid">
-                            <div>
-                                <label>Full Name</label>
-                                <input id="profile-name" type="text">
-                            </div>
-                            <div>
-                                <label>Email</label>
-                                <input id="profile-email" type="email">
-                            </div>
-                            <div>
-                                <label>Address (optional)</label>
-                                <input id="profile-address" type="text">
-                            </div>
-                            <div>
-                                <label>Bank Name</label>
-                                <input id="profile-bank" type="text">
-                            </div>
-                            <div>
-                                <label>Profession</label>
-                                <input id="profile-profession" type="text">
-                            </div>
-                        </div>
-                        <button id="save-profile" class="primary-btn">Save Changes</button>
-                    </div>
-                </div>
+                {% include "home/partials/views/dashboard.html" %}
+                {% include "home/partials/views/expenses.html" %}
+                {% include "home/partials/views/statistics.html" %}
+                {% include "home/partials/views/profile.html" %}
             </div>
         </div>
     </div>
 {% endblock %}
 
 {% block scripts %}
-    <script src="/templates/home/functionality.js"></script>
+    <script type="module" src="/static/home/js/main.js"></script>
 {% endblock %}

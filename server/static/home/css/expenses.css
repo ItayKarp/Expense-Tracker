@@ -1,0 +1,607 @@
+/* ── EXPENSES TABS ─────────────────────────────────────── */
+.expenses-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    background: #f4f3ef;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 22px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 1.2px;
+    color: #888;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+    outline: none;
+}
+
+.tab-btn:hover {
+    color: #333;
+    background: #ebebeb;
+}
+
+.tab-btn.active {
+    background: #111;
+    color: #fff;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.18);
+}
+
+/* ── VIEW HEADER ───────────────────────────────────────── */
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.expenses-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.search-input {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: #333;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.2s;
+    letter-spacing: 0.04em;
+}
+
+.search-input:focus { border-color: #999; }
+.search-input::placeholder { color: #bbb; }
+
+/* ── STATUS ────────────────────────────────────────────── */
+.expenses-status {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    min-height: 16px;
+    color: #888;
+}
+
+.expenses-status.err { color: #c0392b; }
+
+/* ── TABLE ─────────────────────────────────────────────── */
+.table-wrapper {
+    max-height: 850px;   /* 👈 adjust this number if needed */
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.expenses-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+}
+
+.expenses-table thead {
+    background: #111;
+    color: #fff;
+}
+
+.expenses-table thead th {
+    padding: 12px 18px;
+    text-align: left;
+    font-family: 'VT323', monospace;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    font-weight: normal;
+}
+
+.expenses-table tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.12s;
+}
+
+.expenses-table tbody tr:last-child { border-bottom: none; }
+.expenses-table tbody tr:hover { background: #f9f8f5; }
+
+.expenses-table td {
+    padding: 13px 18px;
+    color: #333;
+    vertical-align: middle;
+}
+
+.expenses-table td:first-child {
+    color: #888;
+    font-size: 11px;
+}
+
+/* ── AMOUNT & BADGE ────────────────────────────────────── */
+.expense-amount {
+    font-family: 'VT323', monospace;
+    font-size: 17px;
+    letter-spacing: 1px;
+}
+
+.expense-amount.negative { color: #c0392b; }
+.expense-amount.positive { color: #27ae60; }
+
+.expense-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: #f4f3ef;
+    border: 1px solid #e0e0e0;
+    color: #555;
+}
+
+.expense-badge.completed { background: #eafaf1; border-color: #a9dfbf; color: #1e8449; }
+.expense-badge.pending   { background: #fef9e7; border-color: #f9e79f; color: #b7770d; }
+.expense-badge.failed    { background: #fdedec; border-color: #f1948a; color: #922b21; }
+
+/* ── EMPTY STATE ───────────────────────────────────────── */
+.table-empty-row td {
+    text-align: center;
+    color: #aaa;
+    padding: 40px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+}
+
+/* ── TABLE FOOTER / SUMMARY ────────────────────────────── */
+.table-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: #f7f7f7;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: #555;
+}
+
+.expenses-total {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 1px;
+    color: #555;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.summary-sep {
+    color: #bbb;
+    font-size: 14px;
+}
+
+.amount-neutral  { color: #111; font-weight: 600; }
+.amount-negative { color: #e03e3e; font-weight: 600; }
+
+/* ── SORTABLE HEADERS ──────────────────────────────────── */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+th.sortable:hover { background: #222; }
+
+th.sortable .sort-icon {
+    font-size: 11px;
+    color: #888;
+    margin-left: 4px;
+}
+
+th.sort-asc .sort-icon,
+th.sort-desc .sort-icon { color: #fff; }
+
+/* ── REFRESH BUTTON ────────────────────────────────────── */
+#refresh-expenses-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #111;
+    color: #e8e8e8;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+    outline: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+
+#refresh-expenses-btn:hover {
+    background: #1a1a1a;
+    border-color: #555;
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.28);
+}
+
+#refresh-expenses-btn:active {
+    background: #000;
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+#refresh-expenses-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#refresh-expenses-btn .refresh-icon {
+    display: inline-block;
+    font-size: 18px;
+    line-height: 1;
+    transition: transform 0.2s;
+}
+
+#refresh-expenses-btn.loading .refresh-icon {
+    animation: spin 0.65s linear infinite;
+}
+
+/* ── ACTIONS COLUMN ────────────────────────────────────── */
+.actions-th   { width: 40px; }
+.actions-cell { text-align: center; padding: 0 8px; }
+
+.dots-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: #888;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 2px 8px;
+    line-height: 1;
+    letter-spacing: 1px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.dots-btn:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.12);
+    color: #fff;
+}
+
+/* ── ROW DROPDOWN ──────────────────────────────────────── */
+.expense-dropdown {
+    position: absolute;
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 4px;
+    z-index: 9999;
+    min-width: 130px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    animation: dropdown-in 0.12s ease;
+}
+
+.expense-dropdown.visible { display: flex; }
+
+.dropdown-item {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    padding: 7px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+}
+
+.dropdown-item:hover         { background: rgba(255,255,255,0.08); color: #fff; }
+.dropdown-item.danger        { color: #e05c5c; }
+.dropdown-item.danger:hover  { background: rgba(224,92,92,0.12); color: #ff7070; }
+
+/* ── UPDATE MODAL ──────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+}
+
+.modal-overlay.visible {
+    display: flex;
+    animation: modal-fade 0.18s ease;
+}
+
+.modal-box {
+    background: #12121f;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    width: 420px;
+    max-width: 92vw;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+    animation: modal-slide 0.18s ease;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: #aaa;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.modal-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+.modal-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modal-field label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: #666;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    text-transform: uppercase;
+}
+
+.modal-field input,
+.modal-field select {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: #ddd;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: auto;
+}
+
+.modal-field input:focus,
+.modal-field select:focus { border-color: rgba(255,255,255,0.25); }
+
+.modal-field select option { background: #1a1a2e; }
+
+.modal-status {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 12px;
+    min-height: 18px;
+    color: #e05c5c;
+}
+
+.modal-status.ok  { color: #5ce05c; }
+.modal-status.err { color: #e05c5c; }
+
+.modal-submit-btn { margin-top: 4px; align-self: flex-end; }
+
+/* ── CONFIRM MODAL ─────────────────────────────────────── */
+#confirm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+#confirm-modal-overlay.visible { opacity: 1; }
+
+.confirm-modal {
+    background: #020f05;
+    border: 1px solid var(--green);
+    box-shadow: 0 0 24px var(--green-glow), inset 0 0 40px rgba(0,255,65,0.03);
+    padding: 2rem 2.5rem;
+    min-width: 340px;
+    max-width: 90vw;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--green);
+    transform: translateY(-10px);
+    transition: transform 0.2s ease;
+}
+
+#confirm-modal-overlay.visible .confirm-modal { transform: translateY(0); }
+
+.confirm-modal-title {
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(0,255,65,0.2);
+    padding-bottom: 0.5rem;
+    color: #ff4444;
+    text-shadow: 0 0 8px rgba(255,68,68,0.5);
+}
+
+.confirm-modal-msg {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    color: rgba(0,255,65,0.85);
+}
+
+.confirm-modal-btns {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.confirm-btn {
+    background: transparent;
+    border: 1px solid;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background 0.15s, color 0.15s;
+}
+
+.confirm-btn-yes { border-color: #ff4444; color: #ff4444; }
+.confirm-btn-yes:hover { background: #ff4444; color: #020f05; }
+
+.confirm-btn-no { border-color: var(--green); color: var(--green); }
+.confirm-btn-no:hover { background: var(--green); color: #020f05; }
+
+#add-category-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #f4f3ef; /* Light like the tabs */
+    color: #333;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+#add-category-btn:hover {
+    background: #ebebeb;
+    border-color: #999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#add-category-btn .refresh-icon {
+    font-weight: bold;
+    font-size: 18px;
+}
+/* expenses.css */
+.confirm-btn-no:hover { background: var(--green); color: #020f05; }
+
+#add-expense-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #111; /* Dark theme contrast */
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+#add-expense-btn:hover {
+    background: #222;
+    box-shadow: 0 0 10px rgba(255,255,255,0.1);
+}
+
+#add-expense-btn .refresh-icon {
+    color: var(--green); /* Uses your existing green variable */
+}
+
+/* Ensure select looks terminal-style */
+.modal-select {
+    width: 100%;
+    background: #050505;
+    color: #00ff41;
+    border: 1px solid #333;
+    padding: 8px;
+    font-family: 'VT323', monospace;
+    outline: none;
+}
+
+.modal-select {
+    width: 100%;
+    background: #050505;
+    color: var(--green);
+    border: 1px solid #333;
+    padding: 10px;
+    font-family: 'VT323', monospace;
+    font-size: 1.1rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+
+
+
+/* Prevent header/tabs/footer from shrinking */
+#expenses-view .view-header,
+#expenses-view .expenses-tabs,
+#expenses-view .expenses-status,
+#expenses-view .table-footer {
+    flex: 0 0 auto;
+}
+
+
+
+.expenses-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #111; /* match your header color */
+}
+#expenses-view.active .table-wrapper {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: auto;
+}

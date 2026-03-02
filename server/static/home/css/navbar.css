@@ -1,0 +1,84 @@
+/* ── APP CONTAINER ─────────────────────────────────────── */
+.app-container {
+    position: fixed;
+    inset: 0;
+    background: #f4f3ef;
+    display: none;
+    flex-direction: column;
+    font-family: 'Share Tech Mono', monospace;
+    color: #111;
+    animation: fadeApp 0.6s ease forwards;
+}
+
+/* ── NAVBAR ────────────────────────────────────────────── */
+.app-navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 40px;
+    border-bottom: 1px solid #ddd;
+    background: #fff;
+    z-index: 10;
+    box-shadow: 0 1px 0 #e0e0e0;
+}
+
+.logo {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: #111;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.mini-stats {
+    display: flex;
+    gap: 10px;
+}
+
+.mini-card {
+    background: #f4f3ef;
+    border: 1px solid #e0e0e0;
+    padding: 6px 14px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.mini-label {
+    color: #888;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.mini-value {
+    font-family: 'VT323', monospace;
+    font-size: 17px;
+    color: #111;
+    letter-spacing: 1px;
+}
+
+.nav-btn {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: #555;
+    padding: 6px 14px;
+    border-radius: 6px;
+    transition: all 0.15s;
+}
+
+.nav-btn:hover {
+    border-color: #ccc;
+    color: #111;
+    background: #f4f3ef;
+}

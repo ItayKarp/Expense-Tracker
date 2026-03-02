@@ -1,12 +1,12 @@
-from sqlalchemy import func
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from server.models import Accounts, Expenses, Categories
-from server.database import Session
-from datetime import datetime, timedelta
+from fastapi import APIRouter, Response
+from fastapi.security import HTTPBearer
 import os
-import httpx
 from dotenv import load_dotenv
+
+from server.schemas import UpdateExpenses, CreateCategory,CreateExpense, UpdateProfileRequest,DeleteExpense
+from server.services import get_expenses, dashboard_init_data, delete_expense as del_expense, \
+     get_categories, update_expense_details, create_category, \
+    create_expenses, update_profile_details
 
 load_dotenv()
 
@@ -18,51 +18,43 @@ security = HTTPBearer()
 
 
 
-
-
-def get_account(email, session) -> Accounts:
-    account = session.query(Accounts).filter(Accounts.email == email).first()
-    if account is None:
-        raise HTTPException(status_code=404, detail="Account not found")
-    return account
-
-
 @dashboard_router.get("/data")
 async def dashboard_data(email):
-    with Session() as session:
-        account = get_account(email, session)
-
-        last_month = datetime.now() - timedelta(days=30)
-
-        monthly_total = session.query(
-            func.sum(Expenses.amount)
-        ).filter(
-            Expenses.created_at >= last_month,
-            Expenses.account_id == account.id
-        ).scalar()
-
-        monthly_total = monthly_total if monthly_total is not None else 0
-
-        return {
-            "account_name": account.account_name,
-            "balance": account.balance,
-            "monthly_expenses": monthly_total,
-        }
+    return dashboard_init_data(email)
 
 
 @dashboard_router.get("/expenses")
 def expenses_table(email):
-     with Session() as session:
-        account = get_account(email, session)
-        expenses = (
-            session.query(
-                Expenses.created_at,
-                Expenses.description,
-                Categories.name,
-                Expenses.amount
-            )
-            .join(Categories)
-            .filter(Expenses.account_id == account.id)
-            .all()
-        )
-        return [row._asdict() for row in expenses]
+     return get_expenses(email)
+
+@dashboard_router.put("/expense")
+def update_expense(email:str,expense:UpdateExpenses,parameter):
+    return update_expense_details(email,expense,parameter)
+
+
+@dashboard_router.delete("/expense")
+def delete_expense(email:str,expense_id:DeleteExpense):
+    return del_expense(email,expense_id)
+
+@dashboard_router.get("/categories")
+def categories(email: str):
+    return get_categories(email)
+
+
+@dashboard_router.post("/categories")
+def add_category(email:str,category:CreateCategory):
+    return create_category(email,category)
+
+@dashboard_router.post("/expenses")
+def add_expense(email:str,expense:CreateExpense):
+    return create_expenses(email,expense)
+
+
+@dashboard_router.put("/profile")
+def update_profile(payload: UpdateProfileRequest):
+    return update_profile_details(
+        old_email=payload.old_email,
+        full_name=payload.full_name,
+        email=payload.email,
+        salary=payload.salary
+    )

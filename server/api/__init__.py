@@ -1,1 +1,1 @@
-from .v1 import book_router,authentication_router,dashboard_router
+from .v1 import authentication_router, dashboard_router, statistics_router

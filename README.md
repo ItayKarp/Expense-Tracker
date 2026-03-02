@@ -1,251 +1,279 @@
-# Karpov's Tracker
+# 💰 Karpov's Tracker
 
-> A personal finance tracking application with a terminal-inspired UI, built on FastAPI and PostgreSQL.
+<p align="center">
+  <strong>A Modern Full-Stack Expense Tracking Application</strong><br/>
+  Built with FastAPI • SQLAlchemy • PostgreSQL (NeonDB) • Vanilla JavaScript
+</p>
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Environment Variables](#environment-variables)
-  - [Running the Application](#running-the-application)
-- [API Reference](#api-reference)
-- [Authentication](#authentication)
-- [Database Schema](#database-schema)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+<p align="center">
+  <img src="https://img.shields.io/badge/backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
+  <img src="https://img.shields.io/badge/database-PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white"/>
+  <img src="https://img.shields.io/badge/orm-SQLAlchemy-D71F00?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/frontend-Vanilla%20JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black"/>
+  <img src="https://img.shields.io/badge/auth-JWT-black?style=for-the-badge"/>
+</p>
 
 ---
 
-## Overview
+## 📖 Overview
 
-Karpov's Tracker is a full-stack expense tracking web application. Users can sign up, set up an account with an opening balance, and monitor their spending through a real-time dashboard and filterable expense table. The frontend has a retro terminal aesthetic (`KARPOV_SYS v2.4.1`) served directly from a FastAPI backend using Jinja2 templates.
+**Karpov's Tracker** is a full-stack expense management system designed with clean backend architecture and lightweight frontend principles.
 
----
+The application focuses on:
+- Efficient database-level aggregation
+- REST API design best practices
+- Secure authentication flows
+- Server-side graph rendering
+- Clean UI/UX without frontend frameworks
 
-## Features
-
-### Core
-- **Authentication** — Email/password sign-up and login via an external Neon Auth provider, with JWT-based sessions
-- **Account Setup** — Post-signup onboarding flow to capture full name and opening balance
-- **Dashboard** — Displays account balance and total expenses for the rolling last 30 days
-- **Expense Table** — Sortable, searchable table of all transactions with category and date
-- **Statistics View** — Dedicated section for financial overviews and chart-based analytics (in progress)
-
-### Included but Often Overlooked
-- **Graceful DB connection handling** — SQLAlchemy engine configured with `pool_pre_ping`, `pool_recycle`, and overflow settings to survive idle connections and serverless cold starts
-- **Scoped API versioning** — All account/book routes are prefixed under `/api/v1`, making future versioning non-breaking
-- **Custom Swagger UI path** — Docs are served at `/administrator123` instead of the default `/docs`, reducing automated scanning exposure
-- **Static file isolation** — Templates and static assets are mounted as separate StaticFiles routes, keeping the template directory browsable independently
-- **Plots directory auto-creation** — `PLOTS_DIR` is resolved relative to the server file and created on startup, preventing missing-directory errors on fresh deploys
-- **Modular router architecture** — Each domain (accounts, auth, dashboard, statistics) lives in its own router file and is registered independently in `main.py`
-- **Idiomatic HTTPException re-raising** — Service functions explicitly re-raise `HTTPException` before the generic `except` block so FastAPI error responses aren't swallowed as 500s
+This project demonstrates strong backend fundamentals, SQL optimization, and production-oriented structure.
 
 ---
 
-## Tech Stack
+## ✨ Core Features
 
-| Layer | Technology |
-|---|---|
-| Backend | FastAPI (Python) |
-| Database | PostgreSQL (via SQLAlchemy ORM) |
-| Auth Provider | Neon Auth (JWKS / JWT) |
-| Templating | Jinja2 |
-| Frontend | Vanilla JS, CSS |
-| HTTP Client | httpx (async) |
-| Config | python-dotenv |
+### 🔐 Authentication & Security
+- User Registration & Login
+- JWT-based authentication
+- Secure password reset flow
+- Profile management
+- Protected endpoints
+
+### 💼 Expense Management
+- Create, edit, and delete expenses
+- Category-based tracking
+- Salary configuration
+- Yearly expense overview
+- Clean data rendering
+
+### 📊 Statistics Dashboard
+- Monthly Income vs Expenses comparison
+- 1-Year expense bar chart
+- Expense distribution by category
+- Year balance graph
+- Optimized aggregation queries
+- Graph caching to prevent redundant API calls
 
 ---
 
-## Project Structure
+## 🏗️ Architecture
+
+### Backend
+- **FastAPI** for high-performance API development
+- **SQLAlchemy ORM** with optimized query patterns
+- **PostgreSQL (NeonDB)** as cloud database
+- **Matplotlib** for server-side graph rendering
+- **JWT Authentication**
+- Clean router-based project structure
+
+### Frontend
+- HTML5 + CSS3
+- Vanilla JavaScript
+- Fetch API
+- DOM-based rendering
+- No external UI frameworks
+
+---
+
+## 📂 Project Structure
 
 ```
-project-root/
+server/
 │
-├── main.py                     # App entrypoint, route mounting, static files
+├── main.py
+├── routers/
+│   ├── auth.py
+│   ├── expenses.py
+│   ├── statistics.py
 │
-├── server/
-│   ├── api/
-│   │   ├── __init__.py         # Exports all routers
-│   │   ├── accounts_endpoints.py
-│   │   ├── authenticate_endpoints.py
-│   │   ├── dashboard_endpoints.py
-│   │   └── statistics_endpoints.py
-│   │
-│   ├── services/
-│   │   ├── __init__.py         # Exports all service functions
-│   │   ├── account_services.py
-│   │   └── statistics_services.py
-│   │
-│   ├── schemas/
-│   │   ├── accounts.py         # Pydantic models for accounts
-│   │   └── authentication.py   # Pydantic models for auth
-│   │
-│   ├── models.py               # SQLAlchemy ORM models
-│   └── database.py             # Engine, Base, Session factory
+├── models/
+├── services/
+├── database/
 │
-├── templates/
-│   ├── base.html
-│   └── home/
-│       ├── home.html
-│       ├── styles.css
-│       └── functionality.js
+static/
+│   ├── js/
+│   ├── css/
 │
-└── static/
-    └── plots/                  # Auto-generated on startup
+templates/
+│   ├── dashboard.html
+│   ├── profile.html
+│   ├── login.html
 ```
 
 ---
 
-## Getting Started
+## 📊 How Graphs Work
 
-### Prerequisites
+All graphs are generated server-side:
 
-- Python 3.11+
-- PostgreSQL database (local or hosted — e.g. Neon, Supabase, Railway)
-- A Neon Auth project for authentication (or a compatible JWKS/JWT provider)
+1. SQLAlchemy performs database aggregation (`SUM`, `GROUP BY`, `DATE_TRUNC`)
+2. Results are processed in Python
+3. Matplotlib renders PNG images
+4. Images are returned as API responses
+5. Frontend displays images dynamically
 
-### Installation
+This ensures:
+- Accurate aggregation at DB level
+- Minimal frontend complexity
+- Consistent styling
+- Controlled performance
+
+---
+
+## 🚀 Getting Started
+
+### 1️⃣ Clone Repository
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/karpovs-tracker.git
+git clone https://github.com/yourusername/karpovs-tracker.git
 cd karpovs-tracker
+```
 
-# Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
+---
 
-# Install dependencies
+### 2️⃣ Create Virtual Environment
+
+```bash
+python -m venv .venv
+```
+
+Activate:
+
+**Windows**
+```bash
+.venv\Scripts\activate
+```
+
+**Mac/Linux**
+```bash
+source .venv/bin/activate
+```
+
+---
+
+### 3️⃣ Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Environment Variables
+---
 
-Create a `.env` file in the project root:
+### 4️⃣ Configure Environment Variables
 
-```env
-# PostgreSQL connection string
-DATABASE_URL=postgresql+psycopg://user:password@host:5432/dbname
+Create a `.env` file:
 
-# Neon Auth base URL (or your JWKS provider)
-NEON_BASE_AUTH=https://your-neon-auth-instance.com
+```
+DATABASE_URL=your_neon_database_url
+SECRET_KEY=your_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
-> **Never commit your `.env` file.** Add it to `.gitignore`.
+---
 
-### Running the Application
+### 5️⃣ Run Server
 
 ```bash
-uvicorn main:app --reload
+python -m uvicorn server.main:app --host localhost --port 8000 --reload
 ```
 
-The app will be available at `http://localhost:8000`.
-API documentation is at `http://localhost:8000/administrator123`.
-
----
-
-## API Reference
-
-### Authentication — `/auth`
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/auth/signup` | Register a new user via Neon Auth |
-| `POST` | `/auth/login` | Authenticate and receive a JWT token |
-| `POST` | `/auth/setup` | Create the local account record post-signup |
-
-### Accounts — `/api/v1/books`
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/books/` | List all accounts |
-| `GET` | `/api/v1/books/{account_id}` | Get a single account |
-| `POST` | `/api/v1/books/?type=create` | Create a new account |
-| `PUT` | `/api/v1/books/{account_id}?type=update_details` | Update account details |
-| `DELETE` | `/api/v1/books/{account_id}` | Delete an account |
-
-### Dashboard — `/dashboard`
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/dashboard/data?email=` | Returns balance and 30-day expense total |
-| `GET` | `/dashboard/expenses?email=` | Returns full expense table for the account |
-
----
-
-## Authentication
-
-This application uses **Neon Auth** as an external identity provider. On signup, credentials are forwarded to the Neon Auth service which returns a JWT. That token is stored client-side and used for subsequent authenticated requests.
-
-After signup, a `/auth/setup` call creates a local `Accounts` record in the application database, linking the Neon Auth user identity to the internal account by email.
-
-> The `JWKS_URL` constant in `dashboard_endpoints.py` is wired for future JWT verification middleware — this can be expanded to protect routes using FastAPI's `Depends` + `HTTPBearer`.
-
----
-
-## Database Schema
+Access at:
 
 ```
-categories
-  id              INTEGER PK
-  name            VARCHAR
-  monthly_budget  NUMERIC(10,2)
-
-accounts
-  id              INTEGER PK
-  account_name    VARCHAR UNIQUE NOT NULL
-  balance         NUMERIC(12,2) NOT NULL
-  email           VARCHAR UNIQUE NOT NULL
-
-expenses
-  id              INTEGER PK
-  amount          NUMERIC(10,2) NOT NULL
-  category_id     INTEGER FK → categories.id
-  account_id      INTEGER FK → accounts.id
-  description     VARCHAR
-  created_at      DATETIME
-```
-
-To initialise the schema against your database, run:
-
-```python
-from server.database import Base, engine
-Base.metadata.create_all(engine)
+http://localhost:8000
 ```
 
 ---
 
-## Roadmap
+## 📡 API Overview
 
-- [ ] JWT verification middleware on protected routes (`/dashboard`, `/api/v1`)
-- [ ] Statistics endpoints — per-category breakdowns, monthly trend charts
-- [ ] Expense creation and deletion from the UI
-- [ ] Budget tracking against `categories.monthly_budget`
-- [ ] Pagination on the expenses table endpoint
-- [ ] Dark/light theme toggle
+### Authentication
+```
+POST   /auth/register
+POST   /auth/login
+POST   /auth/request-password-reset
+POST   /auth/reset-password
+```
+
+### Expenses
+```
+GET    /expenses/yearly
+POST   /expenses/create
+PUT    /expenses/update
+DELETE /expenses/delete
+```
+
+### Statistics
+```
+GET /statistics/year_balance_graph
+GET /statistics/income_vs_expenses_graph
+GET /statistics/yearly_expenses_graph
+GET /statistics/expense_by_category_graph
+```
 
 ---
 
-## Contributing
+## 🔒 Security Considerations
 
-1. Fork the repository
-2. Create a feature branch — `git checkout -b feature/your-feature`
-3. Commit your changes — `git commit -m "feat: add your feature"`
-4. Push to the branch — `git push origin feature/your-feature`
-5. Open a Pull Request
-
-Please follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
+- JWT required for protected routes
+- Password reset does not expose user existence
+- Backend validation for sensitive operations
+- Production deployment should include:
+  - HTTPS
+  - Secure CORS configuration
+  - Password hashing
+  - Rate limiting
 
 ---
 
-## License
+## 📈 Performance Considerations
 
-This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details.
+- All heavy aggregation executed at database level
+- Graphs cached to prevent duplicate API calls
+- Efficient SQLAlchemy joins
+- No unnecessary frontend state management
+
+---
+
+## 🧠 Development Philosophy
+
+This project intentionally avoids frontend frameworks to:
+
+- Strengthen backend engineering skills
+- Master ORM query optimization
+- Design scalable REST APIs
+- Build clean system architecture
+- Understand full request lifecycle
+
+---
+
+## 🛠 Future Improvements
+
+- Docker containerization
+- Budget planning module
+- Recurring expenses
+- CSV export functionality
+- Dark mode UI
+- Frontend-rendered charts (Chart.js upgrade)
+- Role-based access control
+
+---
+
+## 📄 License
+
+This project is intended for portfolio and educational purposes.
+
+---
+
+## 👤 Author
+
+**Itay Karpov**
+Full-Stack Developer
+Focused on backend systems, architecture, and performance optimization.
+
+---
+
+<p align="center">
+  Built with clean architecture principles and backend-first engineering mindset.
+</p>

@@ -2,7 +2,7 @@ import os
 from typing import Dict
 from fastapi import HTTPException
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from server.schemas.expenses import DeleteExpense
 from server.services.account_services import get_account
@@ -130,21 +130,33 @@ def get_monthly_expenses(email):
         return [row._asdict() for row in expenses]
 
 
-def get_yearly_expenses(email):
-    with Session() as session:
-        account = get_account(email, session)
-        last_year = datetime.now() - timedelta(days=365)
-        expenses = (
-            session.query(
-                Expenses.created_at,
-                Expenses.description,
-                Categories.name,
-                Expenses.amount,
-                Expenses.id
+def get_yearly_expenses(email: str):
+    try:
+        with Session() as session:
+            account = get_account(email, session)
+            if not account:
+                raise HTTPException(status_code=404, detail="Account not found")
+
+            since = datetime.now(timezone.utc) - timedelta(days=365)
+
+            rows = (
+                session.query(
+                    Expenses.id.label("id"),
+                    Expenses.created_at.label("created_at"),
+                    Expenses.description.label("description"),
+                    Categories.name.label("name"),
+                    Expenses.amount.label("amount"),
+                )
+                .join(Categories, Expenses.category_id == Categories.id)
+                .filter(Expenses.account_id == account.id)
+                .filter(Expenses.created_at >= since)
+                .order_by(Expenses.created_at.desc())
+                .all()
             )
-            .join(Categories)
-            .filter(Expenses.account_id == account.id)
-            .filter(Expenses.created_at >= last_year)
-            .all()
-        )
-        return [row._asdict() for row in expenses]
+
+            return [row._asdict() for row in rows]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")

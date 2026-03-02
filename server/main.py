@@ -31,12 +31,12 @@ async def home(request: Request):
 
 app.include_router(
     authentication_router,
-    prefix="/auth"
+    prefix="/api/v1/auth"
 )
 
 app.include_router(
     dashboard_router,
-    prefix="/dashboard"
+    prefix="/api/v1/dashboard"
 )
 
 

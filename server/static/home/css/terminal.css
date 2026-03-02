@@ -323,3 +323,30 @@
     color: var(--green);
     text-shadow: 0 0 6px var(--green-glow);
 }
+
+/* ── FORGOT PASSWORD PANEL FIX ─────────────────────────── */
+#forgot-reset-wrap {
+    display: none;              /* JS toggles to flex */
+    flex-direction: column;     /* IMPORTANT: stops the one-row layout */
+    gap: 0.45em;                /* match .auth-form spacing */
+    width: 100%;
+}
+
+/* keep the email row consistent */
+#forgot-reset-wrap .field-row {
+    width: 100%;
+}
+
+/* keep button from drifting */
+#forgot-reset-wrap .btn-submit {
+    align-self: flex-start;
+    margin-top: 0.3em;
+}
+
+/* "Back to login" should sit nicely under the button */
+#forgot-reset-wrap .toggle-row {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 0.15em;
+    gap: 0.35em;
+}

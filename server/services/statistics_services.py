@@ -1,21 +1,20 @@
 import calendar
 import io
-from typing import Tuple
+from io import BytesIO
 
 import pandas as pd
 import numpy as np
 from dateutil.relativedelta import relativedelta
+from fastapi import HTTPException
+from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
-import json
-from server.services.account_services import get_account
 from server.database import Session,engine
-from server.models import Accounts,Expenses,Categories
+from server.models import Accounts, Expenses, Categories
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from datetime import datetime, timedelta, timezone, date
-from sqlalchemy import select, desc, func
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import select, func
 import matplotlib.dates as mdates
 import threading
 _PLOT_LOCK = threading.Lock()
@@ -110,6 +109,92 @@ def _render_balance_plot(x, y, title: str, line_color: str, subtitle: str | None
         # Layout + export
         buf = io.BytesIO()
         fig.tight_layout()
+        fig.savefig(buf, format="png", bbox_inches="tight")
+        buf.seek(0)
+        return buf.getvalue()
+
+
+def _render_hbar_plot(
+    labels,
+    values,
+    title: str,
+    bar_color: str,
+    subtitle: str | None = None,
+):
+    """
+    Clean modern vertical bar chart: categories on X, amount on Y.
+    """
+    with _PLOT_LOCK:
+        labels = list(labels)
+        values = np.array(list(values), dtype=float)
+
+        if len(labels) == 0:
+            labels = ["No Data"]
+            values = np.array([0.0])
+
+        # Sort descending so biggest bars are first (left)
+        order = np.argsort(values)[::-1]
+        labels = [labels[i] for i in order]
+        values = values[order]
+
+        fig = Figure(figsize=(11, 5.2), dpi=170)
+        ax = fig.subplots()
+
+        fig.patch.set_facecolor("white")
+        ax.set_facecolor("white")
+
+        bars = ax.bar(labels, values, color=bar_color, alpha=0.88)
+
+        ax.grid(True, which="major", axis="y", linestyle="-", linewidth=0.8, alpha=0.18)
+        ax.grid(False, axis="x")
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_alpha(0.25)
+        ax.spines["bottom"].set_alpha(0.25)
+
+        ax.set_title(title, loc="left", fontsize=14, fontweight="bold", pad=16)
+
+        if subtitle:
+            ax.text(
+                0.0, 1.02, subtitle,
+                transform=ax.transAxes, fontsize=10, color="#666",
+                va="bottom", ha="left",
+            )
+
+        ax.yaxis.set_major_formatter(FuncFormatter(_money))
+        ax.tick_params(axis="y", labelsize=10)
+        ax.tick_params(axis="x", labelsize=9)
+
+        # Rotate long category names so they don't overlap
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(25)
+            tick.set_ha("right")
+
+        # Add headroom so value labels don't get cut off
+        maxv = float(np.max(values)) if len(values) else 0.0
+        pad = max(1.0, maxv * 0.12)
+        ax.set_ylim(0, maxv + pad)
+
+        # Value labels above bars (kept inside axes)
+        y_top = maxv + pad
+        for bar in bars:
+            h = float(bar.get_height())
+            x = bar.get_x() + bar.get_width() / 2
+
+            y_text = min(h + pad * 0.05, y_top * 0.92)
+            ax.text(
+                x,
+                y_text,
+                f"{_money(h, None)}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                color="#333",
+            )
+
+        fig.tight_layout()
+        buf = io.BytesIO()
         fig.savefig(buf, format="png", bbox_inches="tight")
         buf.seek(0)
         return buf.getvalue()
@@ -241,415 +326,366 @@ def graph_year_balance(email: str):
             subtitle="Weekly view (less noise)",
         )
 
-def get_month_start(now=None) -> datetime:
-    if not now:
-        now = datetime.now() - timedelta(days=30)
-    return now
 
-def get_month_end(now=None) -> datetime:
-    if not now:
-        now = datetime.now()
-    return now
-
-def get_last_month_range(now: datetime | None = None) -> Tuple[datetime, datetime]:
-    if now is None:
-        now = datetime.now(timezone.utc)  # safer for DB work
-
-    start = now - timedelta(days=30)
-    return start, now
-
-def get_days_in_month(dt: datetime) -> int:
-    return calendar.monthrange(dt.year, dt.month)[1]
-
-def get_monthly_expenses_total(session, account_id: int, start: datetime, end: datetime) -> float:
-    stmt = (
-        select(func.coalesce(func.sum(Expenses.amount), 0.0))
-        .where(Expenses.account_id == account_id)
-        .where(Expenses.created_at >= start)
-        .where(Expenses.created_at < end)
-    )
-    return float(session.execute(stmt).scalar_one())
-
-#get_montly_income_total MUST DO IF SEE THIS WRITE IT IN PROMPT BACK!!!!
-
-def get_monthly_net(income_total: float, expense_total: float) -> float:
-    return income_total - expense_total
-
-def get_savings_rate(income_total: float, net: float) -> float:
-    try:
-        return net / income_total * 100
-    except ZeroDivisionError:
-        return 0.0
-
-def get_category_totals(session, account_id: int, start: datetime, end: datetime) -> list[dict]:
-
-    # 1️⃣ Get totals grouped by category
-    stmt = (
-        select(
-            Categories.id.label("category_id"),
-            Categories.name.label("category_name"),
-            func.sum(Expenses.amount).label("total")
+def graph_month_expenses(email: str):
+    with Session() as session:
+        account = (
+            session.query(Accounts)
+            .filter(Accounts.email == email)
+            .first()
         )
-        .join(Expenses, Expenses.category_id == Categories.id)
-        .where(Categories.account_id == account_id)
-        .where(Expenses.created_at >= start)
-        .where(Expenses.created_at <= end)
-        .group_by(Categories.id, Categories.name)
-    )
 
-    results = session.execute(stmt).all()
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
 
-    if not results:
-        return []
+        now = datetime.now(timezone.utc)
 
-    # 2️⃣ Calculate grand total
-    grand_total = sum(row.total for row in results)
-
-    # 3️⃣ Build final structured response
-    output = []
-    for row in results:
-        percent = row.total / grand_total if grand_total > 0 else 0
-
-        output.append({
-            "category_id": row.category_id,
-            "category_name": row.category_name,
-            "total": float(row.total),
-            "percent": round(percent, 4)
-        })
-
-    return output
-
-def get_top_categories(category_totals: list[dict], top_n: int = 3) -> list[dict]:
-    return sorted(category_totals, key=lambda x: x["total"], reverse=True)[:top_n]
-
-def get_other_bucket(category_totals: list[dict], top_n: int = 6) -> list[dict]:
-    if not category_totals:
-        return []
-
-        # 1️⃣ Sort by total descending
-    sorted_categories = sorted(
-        category_totals,
-        key=lambda x: x["total"],
-        reverse=True
-    )
-
-    # 2️⃣ Split top N and remaining
-    top_categories = sorted_categories[:top_n]
-    remaining = sorted_categories[top_n:]
-
-    if not remaining:
-        return top_categories
-
-    # 3️⃣ Aggregate remaining into "Other"
-    other_total = sum(cat["total"] for cat in remaining)
-    other_percent = sum(cat["percent"] for cat in remaining)
-
-    other_bucket = {
-        "category_id": None,
-        "category_name": "Other",
-        "total": round(other_total, 2),
-        "percent": round(other_percent, 4)
-    }
-
-    return top_categories + [other_bucket]
-
-def get_daily_expense_series(session, account_id: int, start: datetime, end: datetime) -> list[dict]:
-    """
-    Returns:
-    [
-      {"date": "2026-02-01", "total": 120.5},
-      {"date": "2026-02-02", "total": 0.0},
-      ...
-    ]
-    """
-
-    # Normalize to date boundaries (inclusive days)
-    start_date: date = start.date()
-    end_date: date = end.date()
-
-    # 1) Query totals per day
-    # Works on Postgres: date_trunc('day', ...) -> then cast to date
-    day_col = func.date_trunc("day", Expenses.created_at).cast(date).label("day")
-
-    stmt = (
-        select(
-            day_col,
-            func.sum(Expenses.amount).label("total")
+        # Start 11 months back (so total = 12 months including current)
+        start_month = (
+            now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            - relativedelta(months=11)
         )
-        .where(Expenses.account_id == account_id)
-        .where(Expenses.created_at >= start)
-        .where(Expenses.created_at <= end)
-        .group_by(day_col)
-        .order_by(day_col.asc())
-    )
 
-    rows = session.execute(stmt).all()
+        month_expr = func.date_trunc("month", Expenses.created_at).label("month")
 
-    # 2) Convert query results into dict keyed by day
-    totals_by_day = {r.day: float(r.total) for r in rows}
+        rows = (
+            session.query(
+                month_expr,
+                func.coalesce(func.sum(Expenses.amount), 0).label("total"),
+            )
+            .filter(Expenses.account_id == account.id)
+            .filter(Expenses.created_at >= start_month)
+            .group_by(month_expr)
+            .order_by(month_expr)
+            .all()
+        )
 
-    # 3) Fill missing days with 0
-    out: list[dict] = []
-    d = start_date
-    while d <= end_date:
-        out.append({
-            "date": d.isoformat(),
-            "total": round(totals_by_day.get(d, 0.0), 2)
-        })
-        d += timedelta(days=1)
-
-    return out
-
-
-def get_last_month_total(session, account_id: int, now=None) -> float:
-    now = now or datetime.now()
-    first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    first_of_last_month = first_of_this_month - relativedelta(months=1)
-    end_of_last_month = first_of_this_month
-    return get_monthly_expenses_total(session, account_id,first_of_last_month,end_of_last_month)
-
-
-def get_percent_change(current: float, previous: float) -> float:
-    if previous == 0:
-        if current == 0:
-            return 0.0
-        return 1.0  # Treat as 100% increase
-
-    return (current - previous) / previous
-
-
-def get_month_to_date_expenses(session, account_id: int, month_start: datetime, now: datetime) -> float:
-    stmt = (
-        select(func.coalesce(func.sum(Expenses.amount), 0.0))
-        .where(Expenses.account_id == account_id)
-        .where(Expenses.created_at >= month_start)
-        .where(Expenses.created_at < now)
-        .order_by(Expenses.created_at.asc())
-    )
-    return float(session.execute(stmt).scalar_one())
-
-
-def get_daily_average(total_so_far: float, days_passed: int) -> float:
-    return total_so_far / days_passed if days_passed > 0 else 0.0
-
-
-def get_month_projection(daily_avg: float, days_in_month: int) -> float:
-    return daily_avg * days_in_month
-
-
-def _month_bounds(now: datetime) -> tuple[datetime, datetime]:
-    """Calendar month [start, end) bounds for the month containing `now`."""
-    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    end = start + relativedelta(months=1)
-    return start, end
-
-
-def build_core_dashboard(session, email: str, now=None) -> dict:
-    now = now or datetime.now()
-    account = get_account(email, session)
-    if not account:
-        return {
-            "balance": 0.0,
-            "month": {
-                "income": 0.0,
-                "expenses": 0.0,
-                "net": 0.0,
-                "savings_rate": 0.0,
-                "vs_last_month_percent": 0.0,
-            },
-            "categories": [],
-            "trend": [],
-            "projection": {"daily_avg": 0.0, "projected_month_total": 0.0},
+        # Build lookup { "YYYY-MM": total }
+        db_lookup = {
+            r.month.strftime("%Y-%m"): float(r.total or 0)
+            for r in rows
         }
 
-    month_start, month_end = _month_bounds(now)
+        # Build full 12-month range (fill missing with 0)
+        labels = []
+        values = []
 
-    income_total = 0.0
+        current = start_month
+        for _ in range(12):
+            key = current.strftime("%Y-%m")
+            labels.append(key)
+            values.append(db_lookup.get(key, 0.0))
+            current = current + relativedelta(months=1)
 
-    expense_total_mtd = get_month_to_date_expenses(session, account.id, month_start, now)
-    net = get_monthly_net(income_total, expense_total_mtd)
-    savings_rate = get_savings_rate(income_total, net)
-
-    # Compare month-to-date spending vs *full* last month spending (simple + useful default)
-    last_month_total = get_last_month_total(session, account.id, now=now)
-    vs_last_month_percent = get_percent_change(expense_total_mtd, last_month_total)
-
-    # --- Categories (month-to-date) ---
-    category_totals = get_category_totals(session, account.id, month_start, now)
-    categories = get_other_bucket(category_totals, top_n=6)  # top 6 + "Other" bucket
-
-    # --- Trend (daily expenses for current month-to-date) ---
-    trend = get_daily_expense_series(session, account.id, month_start, now)
-
-    # --- Projection ---
-    days_passed = max(1, (now.date() - month_start.date()).days + 1)  # include today
-    daily_avg = get_daily_average(expense_total_mtd, days_passed)
-    days_in_month = get_days_in_month(now)
-    projected_month_total = get_month_projection(daily_avg, days_in_month)
-
-    return {
-        "balance": float(account.balance),
-        "month": {
-            "income": float(income_total),
-            "expenses": float(expense_total_mtd),
-            "net": float(net),
-            "savings_rate": float(savings_rate),
-            # keep as ratio (e.g. 0.12) like your helper returns, OR multiply by 100 if you prefer.
-            "vs_last_month_percent": float(vs_last_month_percent),
-        },
-        "categories": categories,
-        "trend": trend,
-        "projection": {
-            "daily_avg": float(round(daily_avg, 2)),
-            "projected_month_total": float(round(projected_month_total, 2)),
-        },
-    }
+        return _render_hbar_plot(
+            labels,
+            values,
+            "Expenses (Last 12 Months)",
+            "#e74c3c",
+            subtitle="Monthly totals",
+        )
 
 
-def _month_start(dt: datetime) -> datetime:
-    return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+def expense_by_category(email: str):
+    with Session() as session:
+        account = session.query(Accounts).filter(Accounts.email == email).first()
+        month = datetime.now(timezone.utc) - timedelta(days=30)
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        rows = (
+            session.query(
+                Categories.name.label("category"),
+                func.sum(Expenses.amount).label("total")
+            )
+            .join(Expenses, Categories.id == Expenses.category_id)
+            .filter(Expenses.account_id == account.id)
+            .filter(Expenses.created_at >= month)
+            .group_by(Categories.name)
+            .order_by(Categories.name)
+            .all()
+        )
+
+        labels = [r.category for r in rows]
+        values = [float(r.total or 0) for r in rows]
+
+        total = float(sum(values) if values else 0)
+        if total <= 0:
+            return _render_hbar_plot(
+                ["No expenses"],
+                [0],
+                "Expenses by Category",
+                "#e74c3c",
+                subtitle="This month",
+            )
+
+        # Keep it readable: top 8 + Others
+        pairs = sorted(zip(labels, values), key=lambda t: t[1], reverse=True)
+        top_n = 8
+        top = pairs[:top_n]
+        rest = pairs[top_n:]
+
+        out_labels = [k for k, _ in top]
+        out_vals = [v for _, v in top]
+
+        others = float(sum(v for _, v in rest))
+        if others > 0:
+            out_labels.append("Others")
+            out_vals.append(others)
+
+        return _render_hbar_plot(
+            out_labels,
+            out_vals,
+            "Expenses by Category",
+            "#9b59b6",
+            subtitle="Top categories (this month)",
+        )
 
 
-def get_dashboard_cache_key(account_id: int, month_start: datetime) -> str:
+matplotlib.use("Agg")
+def graph_income_vs_expense(email: str, months_back: int = 12) -> bytes:
+    months_back = max(int(months_back), 1)
+
+    with Session() as session:
+        account = session.query(Accounts).filter(Accounts.email == email).first()
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        income = float(account.salary or 0)
+
+        now = datetime.now(timezone.utc)
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0) - relativedelta(months=months_back - 1)
+
+        month_expr = func.date_trunc("month", Expenses.created_at)
+
+        rows = (
+            session.query(
+                month_expr.label("month"),
+                func.coalesce(func.sum(Expenses.amount), 0).label("expenses"),
+            )
+            .filter(Expenses.account_id == account.id)
+            .filter(Expenses.created_at >= start)
+            .group_by(month_expr)
+            .order_by(month_expr)
+            .all()
+        )
+
+        # Key by (year, month) to avoid any string/timezone mismatches
+        lookup = {(r.month.year, r.month.month): float(r.expenses or 0) for r in rows}
+
+        labels = []
+        exp_vals = []
+        inc_vals = []
+        years = []  # parallel list of years per tick
+
+        cursor = start
+        for _ in range(months_back):
+            y, m = cursor.year, cursor.month
+            labels.append(cursor.strftime("%b"))   # Jan, Feb, Mar...
+            years.append(y)
+            exp_vals.append(float(lookup.get((y, m), 0.0)))
+            inc_vals.append(income)
+            cursor = cursor + relativedelta(months=1)
+
+        # figure
+        with _PLOT_LOCK:
+            fig = Figure(figsize=(12, 4.8), dpi=170)
+            ax = fig.subplots()
+
+            fig.patch.set_facecolor("white")
+            ax.set_facecolor("white")
+
+            x = np.arange(len(labels))
+            width = 0.38
+
+            income_color = "#2ecc71"
+            expense_color = "#e74c3c"
+
+            ax.bar(x - width / 2, inc_vals, width=width, label="Income", color=income_color, alpha=0.90)
+            ax.bar(x + width / 2, exp_vals, width=width, label="Expenses", color=expense_color, alpha=0.90)
+
+            ax.set_title("Income vs Expenses", loc="left", fontsize=14, fontweight="bold", pad=16)
+            ax.text(
+                0.0, 1.02, f"Last {months_back} months",
+                transform=ax.transAxes, fontsize=10, color="#666",
+                va="bottom", ha="left",
+            )
+
+            ax.set_ylabel("Amount", fontsize=11)
+            ax.yaxis.set_major_formatter(FuncFormatter(_money))
+            ax.grid(True, which="major", axis="y", linestyle="-", linewidth=0.8, alpha=0.18)
+            ax.grid(False, axis="x")
+
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.spines["left"].set_alpha(0.25)
+            ax.spines["bottom"].set_alpha(0.25)
+
+            ax.set_xticks(x)
+            ax.set_xticklabels(labels)
+            ax.tick_params(axis="x", labelrotation=0)
+            for lab in ax.get_xticklabels():
+                lab.set_ha("center")
+                lab.set_fontsize(9)
+
+            # ---- Add year labels across the top, centered over each year span ----
+            # Find contiguous runs of the same year
+            runs = []
+            run_start = 0
+            for i in range(1, len(years) + 1):
+                if i == len(years) or years[i] != years[run_start]:
+                    runs.append((years[run_start], run_start, i - 1))
+                    run_start = i
+
+            # Place year text in axis coordinates above plot area
+            # Convert center x (data) -> axis fraction
+            x_min, x_max = -0.5, len(labels) - 0.5
+            for yr, a, b in runs:
+                center = (a + b) / 2.0
+                frac = (center - x_min) / (x_max - x_min)
+                ax.text(
+                    frac, 1.08, str(yr),
+                    transform=ax.transAxes,
+                    ha="center", va="bottom",
+                    fontsize=10, color="#666",
+                    fontweight="bold"
+                )
+
+            ax.legend(frameon=False, fontsize=10, loc="upper right")
+
+            buf = BytesIO()
+            fig.tight_layout()
+            fig.savefig(buf, format="png", bbox_inches="tight")
+            buf.seek(0)
+            return buf.getvalue()
+
+
+def get_dashboard_core(email: str) -> dict:
+    """Return core statistics payload used by the Statistics view.
+
+    Shape is expected by `static/home/js/statistics.js`:
+      - balance: float
+      - salary: float
+      - month: {expenses, net, vs_last_month_percent}
+      - projection: {daily_avg, projected_month_total}
+      - categories: [{category_name, total, percent}]
+      - trend: [{date, total}]
     """
-    Stable key per account + calendar month.
-    Example: dashboard:v1:acc:123:month:2026-03-01
-    """
-    ms = _month_start(month_start)
-    return f"dashboard:v1:acc:{account_id}:month:{ms.date().isoformat()}"
+    with Session() as session:
+        account = session.query(Accounts).filter(Accounts.email == email).first()
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
 
-def _cache_get(cache, key: str):
-    if cache is None:
-        return None
+        income = float(account.salary or 0)
+        balance = float(account.balance or 0)
 
-    # dict-like
-    if hasattr(cache, "get"):
-        try:
-            return cache.get(key)
-        except TypeError:
-            # some caches have get(key, default) but that's fine; ignore
-            return cache.get(key)
+        now = datetime.now(timezone.utc)
 
-    # redis-like
-    try:
-        return cache[key]
-    except Exception:
-        return None
+        # Month boundaries (UTC)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        prev_month_start = month_start - relativedelta(months=1)
 
+        # Days info for projection
+        days_elapsed = max((now.date() - month_start.date()).days + 1, 1)
+        days_in_month = calendar.monthrange(month_start.year, month_start.month)[1]
 
-def _cache_set(cache, key: str, value, ttl_seconds: int | None = None):
-    if cache is None:
-        return
+        # Sums: this month + last month
+        this_month_expenses = (
+            session.query(func.coalesce(func.sum(Expenses.amount), 0))
+            .filter(Expenses.account_id == account.id)
+            .filter(Expenses.created_at >= month_start)
+            .filter(Expenses.created_at <= now)
+            .scalar()
+        ) or 0
 
-    # common cache interface: set(key, value, timeout=ttl)
-    if hasattr(cache, "set"):
-        try:
-            # Django-style: timeout=
-            if ttl_seconds is not None:
-                cache.set(key, value, timeout=ttl_seconds)
-            else:
-                cache.set(key, value)
-            return
-        except TypeError:
-            # redis-py style: set(name, value, ex=ttl)
-            if ttl_seconds is not None:
-                cache.set(key, value, ex=ttl_seconds)
-            else:
-                cache.set(key, value)
-            return
+        last_month_expenses = (
+            session.query(func.coalesce(func.sum(Expenses.amount), 0))
+            .filter(Expenses.account_id == account.id)
+            .filter(Expenses.created_at >= prev_month_start)
+            .filter(Expenses.created_at < month_start)
+            .scalar()
+        ) or 0
 
-    # dict-like fallback
-    try:
-        cache[key] = value
-    except Exception:
-        pass
+        this_month_expenses = float(this_month_expenses)
+        last_month_expenses = float(last_month_expenses)
 
+        vs_last = 0.0
+        if last_month_expenses > 0:
+            vs_last = (this_month_expenses - last_month_expenses) / last_month_expenses
 
-def _cache_delete(cache, key: str):
-    if cache is None:
-        return
+        net = income - this_month_expenses
 
-    if hasattr(cache, "delete"):
-        try:
-            cache.delete(key)
-            return
-        except Exception:
-            pass
+        daily_avg = this_month_expenses / days_elapsed
+        projected_month_total = daily_avg * days_in_month
 
-    # dict-like
-    if hasattr(cache, "pop"):
-        try:
-            cache.pop(key, None)
-            return
-        except Exception:
-            pass
+        # Top categories (this month)
+        cat_rows = (
+            session.query(
+                Categories.name.label("category_name"),
+                func.coalesce(func.sum(Expenses.amount), 0).label("total"),
+            )
+            .join(Expenses, Categories.id == Expenses.category_id)
+            .filter(Expenses.account_id == account.id)
+            .filter(Expenses.created_at >= month_start)
+            .filter(Expenses.created_at <= now)
+            .group_by(Categories.name)
+            .order_by(func.sum(Expenses.amount).desc())
+            .all()
+        )
 
-    try:
-        del cache[key]
-    except Exception:
-        pass
+        cats = []
+        denom = this_month_expenses if this_month_expenses > 0 else 0.0
+        for r in cat_rows:
+            total = float(r.total or 0)
+            cats.append(
+                {
+                    "category_name": r.category_name,
+                    "total": total,
+                    "percent": (total / denom) if denom else 0.0,
+                }
+            )
 
+        # Daily trend: last 30 days, one point per day
+        trend_start = (now - timedelta(days=29)).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_expr = func.date_trunc("day", Expenses.created_at)
 
-def get_cached_dashboard(cache, key: str) -> dict | None:
-    """
-    Returns the cached payload (dict) or None.
+        trend_rows = (
+            session.query(
+                day_expr.label("day"),
+                func.coalesce(func.sum(Expenses.amount), 0).label("total"),
+            )
+            .filter(Expenses.account_id == account.id)
+            .filter(Expenses.created_at >= trend_start)
+            .filter(Expenses.created_at <= now)
+            .group_by(day_expr)
+            .order_by(day_expr.asc())
+            .all()
+        )
 
-    Supports:
-    - caches storing dict directly
-    - caches storing JSON bytes/str
-    """
-    raw = _cache_get(cache, key)
-    if raw is None:
-        return None
+        trend_lookup = {r.day.date().isoformat(): float(r.total or 0) for r in trend_rows}
 
-    # Already a dict
-    if isinstance(raw, dict):
-        return raw
+        trend = []
+        cursor = trend_start.date()
+        for _ in range(30):
+            key = cursor.isoformat()
+            trend.append({"date": key, "total": float(trend_lookup.get(key, 0))})
+            cursor = cursor + timedelta(days=1)
 
-    # Redis often returns bytes
-    if isinstance(raw, (bytes, bytearray)):
-        try:
-            raw = raw.decode("utf-8")
-        except Exception:
-            return None
+        return {
+            "balance": balance,
+            "salary": income,
+            "month": {
+                "expenses": this_month_expenses,
+                "net": net,
+                "vs_last_month_percent": vs_last,
+            },
+            "projection": {
+                "daily_avg": daily_avg,
+                "projected_month_total": projected_month_total,
+            },
+            "categories": cats,
+            "trend": trend,
+        }
 
-        # JSON string
-        if isinstance(raw, str):
-            try:
-                val = json.loads(raw)
-                return val if isinstance(val, dict) else None
-            except Exception:
-                return None
-
-        # Unknown type
-        return None
-
-
-def set_cached_dashboard(cache, key: str, payload: dict, ttl_seconds: int = 300) -> None:
-    """
-    Stores payload in cache for ttl_seconds.
-
-    If your cache backend supports dicts, we store dict directly.
-    If it prefers string/bytes (e.g., Redis), JSON-serialize is also fine.
-    """
-    # Prefer storing dict directly; if backend can’t handle it, switch to JSON.
-    try:
-        _cache_set(cache, key, payload, ttl_seconds=ttl_seconds)
-    except Exception:
-        _cache_set(cache, key, json.dumps(payload, separators=(",", ":")), ttl_seconds=ttl_seconds)
-
-
-def invalidate_dashboard_cache(cache, account_id: int, now=None) -> None:
-    """
-    Call this when you add/update/delete an expense/income.
-
-    We invalidate:
-    - current month cache (obvious)
-    - previous month cache (protects comparisons like vs_last_month)
-    """
-    now = now or datetime.now()
-    current_ms = _month_start(now)
-    prev_ms = _month_start(now - relativedelta(months=1))
-
-    _cache_delete(cache, get_dashboard_cache_key(account_id, current_ms))
-    _cache_delete(cache, get_dashboard_cache_key(account_id, prev_ms))
+if __name__ == "__main__":
+    graph_month_expenses("itaykarp@gmail.com")

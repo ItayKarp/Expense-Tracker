@@ -1,6 +1,6 @@
 import { apiUpdateProfileDetails, apiRequestPasswordReset, apiResetPassword } from "./api.js";
 import { getEmail } from "./modals.js";
-import { setNavbarSalary } from "./ui.js";
+import { setNavbarSalary, invalidateDashboardCache } from "./ui.js";
 
 let _wired = false;
 
@@ -12,6 +12,49 @@ function setStatus(el, msg, ok = true) {
   el.textContent = msg;
 }
 
+/**
+ * Turn any API response (object/string) into something user-friendly.
+ */
+function formatApiMessage(payload, fallback) {
+  if (payload == null) return fallback || "";
+  if (typeof payload === "string") return payload;
+
+  // common FastAPI shapes: {detail: "..."} or {message: "..."}
+  if (typeof payload === "object") {
+    const d = payload.detail ?? payload.message ?? payload.msg;
+    if (typeof d === "string") return d;
+
+    // sometimes {detail: [{msg: "..."}]} (Pydantic validation)
+    if (Array.isArray(payload.detail) && payload.detail.length) {
+      const first = payload.detail[0];
+      if (first?.msg) return String(first.msg);
+    }
+
+    try {
+      return JSON.stringify(payload);
+    } catch {
+      return fallback || "Success.";
+    }
+  }
+
+  return fallback || String(payload);
+}
+
+/**
+ * Errors are thrown as Error(text). If text is JSON, extract its message.
+ */
+function formatApiError(err, fallback = "Request failed.") {
+  const raw = err?.message ?? String(err);
+  if (!raw) return fallback;
+
+  try {
+    const obj = JSON.parse(raw);
+    return formatApiMessage(obj, raw);
+  } catch {
+    return raw;
+  }
+}
+
 function getTokenFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get("token");
@@ -20,19 +63,21 @@ function getTokenFromUrl() {
 function setResetModeUI() {
   const token = getTokenFromUrl();
 
-  const resetBtn = document.getElementById("reset-btn");
-  const resetFields = document.getElementById("reset-fields"); // wrapper in HTML
-  const resetStatus = document.getElementById("reset-status");
+  const btn = document.getElementById("profile-reset-btn");
+  const fields = document.getElementById("profile-reset-fields");
+  const status = document.getElementById("profile-reset-status");
 
-  if (!resetBtn || !resetFields) return;
+  if (!btn || !fields) return;
 
   if (token) {
-    resetBtn.textContent = "Set New Password";
-    resetFields.style.display = "grid";
-    setStatus(resetStatus, "Token detected. Set your new password below.", true);
+    btn.textContent = "Set New Password";
+    fields.style.display = "grid";      // or "block" if you prefer
+    if (status) setStatus(status, "Token detected. Enter a new password.", true);
   } else {
-    resetBtn.textContent = "Send Reset Link";
-    resetFields.style.display = "none"; // hide password inputs until token exists
+    btn.textContent = "Send Reset Link";
+    fields.style.display = "none";
+    // optional: hide status when no token
+    if (status) status.style.display = "none";
   }
 }
 
@@ -45,89 +90,157 @@ export function initProfile() {
   window.addEventListener("popstate", setResetModeUI);
 
   document.addEventListener("click", async (e) => {
-    // SAVE PROFILE
+
+    /* =========================
+       SAVE PROFILE
+    ========================== */
     const saveBtn = e.target.closest("#save-profile");
     if (saveBtn) {
-      const status = document.getElementById("profile-status");
-      const fullNameInput = document.getElementById("profile-name");
-      const emailInput = document.getElementById("profile-email");
-      const salaryInput = document.getElementById("profile-salary");
+      e.preventDefault?.(); // prevent form submit reload
+
+      const statusEl = document.getElementById("profile-status");
 
       try {
         const old_email = getEmail();
-        if (!old_email) throw new Error("No user email found (localStorage user missing).");
+        if (!old_email) throw new Error("No user email found.");
 
-        const full_name = (fullNameInput?.value || "").trim();
-        const email = (emailInput?.value || "").trim();
+        const full_name =
+          (document.getElementById("profile-name")?.value || "").trim();
 
-        // normalize salary
-        const salaryRaw = salaryInput?.value;
+        const email =
+          (document.getElementById("profile-email")?.value || "").trim();
+
+        const salaryRaw =
+          document.getElementById("profile-salary")?.value;
+
         const salary =
-          salaryRaw === "" || salaryRaw === undefined || salaryRaw === null ? null : Number(salaryRaw);
+          salaryRaw === "" || salaryRaw == null
+            ? null
+            : Number(String(salaryRaw).replace(/,/g, ""));
 
-        const updated = await apiUpdateProfileDetails(old_email, full_name, email, salary);
+        localStorage.setItem("user", JSON.stringify(merged));
 
-        // Always merge updated fields into localStorage (but don't overwrite with undefined/null)
+        // Dashboard view is cached; invalidate so it refetches fresh salary/balance next time.
+        invalidateDashboardCache();
+
+        if (merged?.salary != null) {
+          setNavbarSalary(merged.salary);
+        }
+
+        const updated = await apiUpdateProfileDetails(
+          old_email,
+          full_name,
+          email,
+          salary
+        );
+
+        // Merge into localStorage safely
         const prev = JSON.parse(localStorage.getItem("user") || "{}");
+
         const merged = {
           ...prev,
           ...(updated || {}),
           email: updated?.email ?? prev.email,
-          salary: updated?.salary ?? salary ?? prev.salary,
+          account_name:
+            updated?.account_name ??
+            updated?.accountName ??
+            prev.account_name,
+          salary: updated?.salary ?? prev.salary,
         };
 
         localStorage.setItem("user", JSON.stringify(merged));
 
-        // ✅ Immediately update navbar salary
-        setNavbarSalary(merged.salary);
+        if (merged?.salary != null) {
+          setNavbarSalary(merged.salary);
+        }
 
-        setStatus(status, "Saved successfully ✅", true);
+        setStatus(statusEl, "Profile updated ✅", true);
+
       } catch (err) {
-        setStatus(status, `Save failed: ${err.message}`, false);
+        console.error("Profile update error:", err);
+        setStatus(
+          statusEl,
+          `Update failed: ${formatApiError(err)}`,
+          false
+        );
       }
-      return;
     }
 
-    // PASSWORD RESET BUTTON
-    const resetBtn = e.target.closest("#reset-btn");
+    /* =========================
+       RESET PASSWORD
+    ========================== */
+    const resetBtn = e.target.closest("#profile-reset-btn");
     if (resetBtn) {
-      const resetStatus = document.getElementById("reset-status");
+      e.preventDefault?.();
+
+      const resetStatus = document.getElementById("profile-reset-status");
       const token = getTokenFromUrl();
 
       try {
+        // Step 1: request reset email
         if (!token) {
-          // Step 1: request reset link
           const email = getEmail();
-          if (!email) throw new Error("No user email found (localStorage user missing).");
+          if (!email) throw new Error("No user email found.");
 
-          // IMPORTANT: keep redirectTo minimal + same-origin
-          const redirectTo = `${window.location.origin}${window.location.pathname}`;
-          console.log("Password reset redirectTo:", redirectTo);
+          const redirectTo =
+            `${window.location.origin}${window.location.pathname}`;
 
-          await apiRequestPasswordReset(email, redirectTo);
-          setStatus(resetStatus, "Reset email sent. Check your inbox 📩", true);
+          const payload =
+            await apiRequestPasswordReset(email, redirectTo);
+
+          setStatus(
+            resetStatus,
+            `✅ ${formatApiMessage(
+              payload,
+              "Reset email sent. Check your inbox 📩"
+            )}`,
+            true
+          );
+
           return;
         }
 
-        // Step 2: user opened email link with ?token=...
-        const p1 = document.getElementById("reset-password")?.value || "";
-        const p2 = document.getElementById("reset-confirm")?.value || "";
+        // Step 2: token present → reset password
+        const p1 = document.getElementById("profile-reset-password")?.value || "";
+        const p2 = document.getElementById("profile-reset-confirm")?.value || "";
 
-        if (p1.length < 8) throw new Error("Password must be at least 8 characters.");
-        if (p1 !== p2) throw new Error("Passwords do not match.");
+        if (p1.length < 8)
+          throw new Error("Password must be at least 8 characters.");
 
-        await apiResetPassword(token, p1);
-        setStatus(resetStatus, "Password updated ✅ You can now log in.", true);
+        if (p1 !== p2)
+          throw new Error("Passwords do not match.");
 
-        // clear token from URL + hide password fields again
+        const payload = await apiResetPassword(token, p1);
+
+        setStatus(
+          resetStatus,
+          `✅ ${formatApiMessage(
+            payload,
+            "Password updated. You can now log in."
+          )}`,
+          true
+        );
+
+        // Remove token from URL
         const params = new URLSearchParams(window.location.search);
         params.delete("token");
-        const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+        const newUrl =
+          `${window.location.pathname}${
+            params.toString() ? "?" + params.toString() : ""
+          }`;
+
         window.history.replaceState({}, "", newUrl);
         setResetModeUI();
+
       } catch (err) {
-        setStatus(resetStatus, `Reset failed: ${err.message}`, false);
+        console.error("Reset error:", err);
+        setStatus(
+          resetStatus,
+          `Reset failed: ${formatApiError(err)}`,
+          false
+        );
       }
     }
+
   });
 }

@@ -7,7 +7,7 @@ function getToken() {
 }
 
 export async function apiLogin(email, password) {
-    const response = await fetch("/auth/login", {
+    const response = await fetch("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -17,7 +17,7 @@ export async function apiLogin(email, password) {
 }
 
 export async function apiSignup(email, password, name) {
-    const response = await fetch("/auth/signup", {
+    const response = await fetch("/api/v1/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, name }),
@@ -27,7 +27,7 @@ export async function apiSignup(email, password, name) {
 }
 
 export async function apiSetupAccount(balance, fullName, email) {
-    const response = await fetch("/auth/setup", {
+    const response = await fetch("/api/v1/auth/setup", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -40,7 +40,7 @@ export async function apiSetupAccount(balance, fullName, email) {
 }
 
 export async function apiFetchDashboard(email) {
-    const response = await fetch(`/dashboard/data?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`/api/v1/dashboard/data?email=${encodeURIComponent(email)}`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${getToken()}` }
     });
@@ -49,7 +49,7 @@ export async function apiFetchDashboard(email) {
 }
 
 export async function apiFetchMonthlyExpenses(email) {
-    const response = await fetch(`/dashboard/monthly_expenses?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`/api/v1/statistics/monthly_expenses?email=${encodeURIComponent(email)}`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${getToken()}` }
     });
@@ -58,7 +58,7 @@ export async function apiFetchMonthlyExpenses(email) {
 }
 
 export async function apiFetchYearlyExpenses(email) {
-    const response = await fetch(`/dashboard/yearly_expenses?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`/api/v1/statistics/yearly_expenses?email=${encodeURIComponent(email)}`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${getToken()}` }
     });
@@ -67,7 +67,7 @@ export async function apiFetchYearlyExpenses(email) {
 }
 
 export async function apiFetchAllExpenses(email) {
-    const response = await fetch(`/dashboard/expenses?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`/api/v1/statistics/expenses?email=${encodeURIComponent(email)}`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${getToken()}` }
     });
@@ -77,7 +77,7 @@ export async function apiFetchAllExpenses(email) {
 
 export async function apiFetchStatistics(email) {
   const response = await fetch(
-    `/statistics/dashboard/core?email=${encodeURIComponent(email)}`,
+    `/api/v1/statistics/core?email=${encodeURIComponent(email)}`,
     {
       method: "GET",
       headers: { "Authorization": `Bearer ${getToken()}` }
@@ -89,7 +89,7 @@ export async function apiFetchStatistics(email) {
 
 export async function apiFetchCategories(email) {
     // We append the accountId as a query parameter
-    const response = await fetch(`/dashboard/categories?email=${email}`, {
+    const response = await fetch(`/api/v1/dashboard/categories?email=${email}`, {
         method: "GET",
         headers: {
             "Authorization": `Bearer ${getToken()}`,
@@ -101,7 +101,7 @@ export async function apiFetchCategories(email) {
 }
 
 export async function apiDeleteExpense(email, expenseId) {
-    const response = await fetch(`/dashboard/expense?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`/api/v1/dashboard/expense?email=${encodeURIComponent(email)}`, {
         method: "DELETE",
         headers: {
             "Content-Type": "application/json",
@@ -115,7 +115,7 @@ export async function apiDeleteExpense(email, expenseId) {
 
 export async function apiUpdateExpense(email, expenseId, amount, category, description) {
     const response = await fetch(
-        `/dashboard/expense?email=${encodeURIComponent(email)}&parameter=update_details`,
+        `/api/v1/dashboard/expense?email=${encodeURIComponent(email)}&parameter=update_details`,
         {
             method: "PUT",
             headers: {
@@ -130,7 +130,7 @@ export async function apiUpdateExpense(email, expenseId, amount, category, descr
 }
 
 export async function apiCreateCategory(email, categoryName, monthlyBudget) {
-    const response = await fetch(`/dashboard/categories?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`/api/v1/dashboard/categories?email=${encodeURIComponent(email)}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -145,9 +145,8 @@ export async function apiCreateCategory(email, categoryName, monthlyBudget) {
     return { response, data };
 }
 
-
 export async function apiCreateExpense(email, amount, category, description) {
-    const response = await fetch(`/dashboard/expenses?email=${encodeURIComponent(email)}`, {
+    const response = await fetch(`/api/v1/dashboard/expenses?email=${encodeURIComponent(email)}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -165,7 +164,7 @@ export async function apiCreateExpense(email, amount, category, description) {
 
 // --- GRAPH ENDPOINTS (return PNG bytes) ---
 export async function apiFetchMonthBalanceGraph(email) {
-  const response = await fetch(`/dashboard/month_balance_graph?email=${encodeURIComponent(email)}`, {
+  const response = await fetch(`/api/v1/statistics/month_balance_graph?email=${encodeURIComponent(email)}`, {
     method: "GET",
     headers: { "Authorization": `Bearer ${getToken()}` },
   });
@@ -175,7 +174,7 @@ export async function apiFetchMonthBalanceGraph(email) {
 }
 
 export async function apiFetchYearBalanceGraph(email) {
-  const response = await fetch(`/dashboard/year_balance_graph?email=${encodeURIComponent(email)}`, {
+  const response = await fetch(`/api/v1/statistics/yearly_balance_graph?email=${encodeURIComponent(email)}`, {
     method: "GET",
     headers: { "Authorization": `Bearer ${getToken()}` },
   });
@@ -184,10 +183,50 @@ export async function apiFetchYearBalanceGraph(email) {
   return { response, blob };
 }
 
+// --- STATISTICS GRAPHS (return PNG bytes) ---
+export async function apiFetchIncomeVsExpensesGraph(email, monthsBack = 12) {
+  const response = await fetch(
+    `/api/v1/statistics/income_vs_expenses_graph?email=${encodeURIComponent(email)}&months_back=${encodeURIComponent(monthsBack)}`,
+    {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${getToken()}` },
+    }
+  );
+
+  const blob = await response.blob();
+  return { response, blob };
+}
+
+export async function apiFetchExpensesByCategoryGraph(email) {
+  const response = await fetch(
+    `/api/v1/statistics/expenses_by_category?email=${encodeURIComponent(email)}`,
+    {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${getToken()}` },
+    }
+  );
+
+  const blob = await response.blob();
+  return { response, blob };
+}
+
+export async function apiFetchExpensesByMonthsGraph(email) {
+  const response = await fetch(
+    `/api/v1/statistics/expenses_by_months?email=${encodeURIComponent(email)}`,
+    {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${getToken()}` },
+    }
+  );
+
+  const blob = await response.blob();
+  return { response, blob };
+}
+
 export async function apiUpdateProfileDetails(old_email, full_name, email, salary) {
   const token = localStorage.getItem("token");
 
-  const res = await fetch("/dashboard/profile", {
+  const res = await fetch("/api/v1/dashboard/profile", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -217,7 +256,7 @@ export async function apiUpdateProfileDetails(old_email, full_name, email, salar
 }
 
 export async function apiRequestPasswordReset(email, redirectTo) {
-  const res = await fetch(`/auth/request-password-reset`, {
+  const res = await fetch(`/api/v1/auth/request-password-reset`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, redirectTo }),
@@ -228,7 +267,7 @@ export async function apiRequestPasswordReset(email, redirectTo) {
 }
 
 export async function apiResetPassword(token, newPassword) {
-  const res = await fetch(`/auth/reset-password`, {
+  const res = await fetch(`/api/v1/auth/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, newPassword }),

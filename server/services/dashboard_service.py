@@ -34,3 +34,4 @@ def update_profile_details(old_email:str,full_name:str,email:str,salary:float|in
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
+

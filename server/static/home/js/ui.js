@@ -32,7 +32,7 @@ export function setNavbarSalary(salary) {
   }
 
   const num = Number(value);
-  el.textContent = `$${Number.isFinite(num) ? num.toLocaleString() : "0"}`;
+  el.textContent = `$${Number.isFinite(num) ? fmt(num) : fmt(0)}`;
 }
 
 // ── VIEW SWITCHER ──────────────────────────────────────────
@@ -52,8 +52,6 @@ function ensureDashboardGraphSection() {
   const dash = document.getElementById("dashboard-view");
   if (!dash) return null;
 
-  // If you already have a “top section” container, you can change where we insert.
-  // By default, we append to the dashboard view.
   let wrap = document.getElementById("dashboard-graphs");
   if (!wrap) {
     wrap = document.createElement("div");
@@ -97,7 +95,7 @@ async function loadDashboardGraphs(email, force = false) {
   const monthImg    = document.getElementById("month-balance-img");
   const yearImg     = document.getElementById("year-balance-img");
 
-  // ✅ If we already have cached images and we're not forcing, reuse them
+  // If cached and not forcing, reuse
   if (!force && _monthGraphUrl && _yearGraphUrl) {
     monthImg.src = _monthGraphUrl;
     yearImg.src  = _yearGraphUrl;
@@ -106,7 +104,6 @@ async function loadDashboardGraphs(email, force = false) {
     return;
   }
 
-  // (existing fetch logic)
   monthStatus.textContent = "Loading...";
   yearStatus.textContent  = "Loading...";
   monthImg.removeAttribute("src");
@@ -141,22 +138,60 @@ async function loadDashboardGraphs(email, force = false) {
   }
 }
 
+// ── DASHBOARD DATA CACHE ───────────────────────────────────
+// Goal: avoid hitting /dashboard/data every time user clicks "Dashboard".
+let _dashboardCacheEmail = null;
+let _dashboardCacheData  = null;
+
+function applyDashboardDataToUI(data) {
+  document.getElementById("username").textContent         = data.account_name;
+  document.getElementById("balance-display").textContent  = `$${fmt(data.balance)}`;
+  document.getElementById("expenses-display").textContent = `$${fmt(data.monthly_expenses)}`;
+
+  // Salary updates from the same payload
+  setNavbarSalary(data.salary);
+
+  // Keep localStorage user salary in sync (prevents stale salary elsewhere)
+  try {
+    const prev = JSON.parse(localStorage.getItem("user") || "{}");
+    localStorage.setItem("user", JSON.stringify({ ...prev, salary: data.salary }));
+  } catch {}
+
+  window._currentBalance = parseFloat(data.balance) || 0;
+  window._accountId      = data.account_id || null;
+}
+
 // ── DASHBOARD DATA LOADER ──────────────────────────────────
-export async function loadDashboard(email) {
+// force=false => uses cache if available for same email (no API request)
+// force=true  => refetches from API and updates cache
+export async function loadDashboard(email, force = false) {
+  // Use cache if same user + already loaded + not forcing
+  if (!force && _dashboardCacheEmail === email && _dashboardCacheData) {
+    applyDashboardDataToUI(_dashboardCacheData);
+    // graphs can stay cached too
+    loadDashboardGraphs(email, false);
+    return;
+  }
+
   const { response, data } = await apiFetchDashboard(email);
 
   if (response.ok) {
-    document.getElementById("username").textContent         = data.account_name;
-    document.getElementById("balance-display").textContent  = `$${fmt(data.balance)}`;
-    document.getElementById("expenses-display").textContent = `$${fmt(data.monthly_expenses)}`;
-    window._currentBalance = parseFloat(data.balance) || 0;
-    window._accountId      = data.account_id || null;
+    _dashboardCacheEmail = email;
+    _dashboardCacheData  = data;
 
-    // ✅ load the images whenever dashboard loads
-    loadDashboardGraphs(email);
+    applyDashboardDataToUI(data);
+
+    // Load graphs; force only when we force dashboard refresh
+    loadDashboardGraphs(email, force);
   } else {
     console.error("Failed to load dashboard data:", data.detail);
   }
+}
+
+// Optional: allow other modules to invalidate cache if you want later
+export function invalidateDashboardCache() {
+  _dashboardCacheEmail = null;
+  _dashboardCacheData  = null;
 }
 
 // ── OVERLAY → APP TRANSITION ───────────────────────────────
@@ -164,7 +199,7 @@ export function showDashboard(email) {
   const overlay = document.querySelector(".screen-overlay");
   overlay.style.transition = "opacity 0.5s ease";
   overlay.style.opacity    = "0";
-  setNavbarSalary(); // pulls from localStorage.user.salary
+  setNavbarSalary(); // fallback from localStorage, until loadDashboard applies payload
 
   setTimeout(() => {
     overlay.style.display = "none";
@@ -173,7 +208,7 @@ export function showDashboard(email) {
     app.style.display = "flex";
     app.classList.add("app-visible");
 
-    // This already runs on first load; loadDashboard will now also load graphs.
-    loadDashboard(email);
+    // First time: fetches (cache empty). Later clicks: cached (unless forced).
+    loadDashboard(email, false);
   }, 500);
 }

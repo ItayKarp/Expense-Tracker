@@ -1,7 +1,65 @@
 /* ── STATISTICS ────────────────────────────────────────── */
+
 .statistics-content {
-    margin-top: 28px;
-    font-size: 12px;
-    color: #888;
-    letter-spacing: 0.05em;
+  margin-top: 24px;
+}
+
+/* Layout: left insights + right graphs */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.stats-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.stats-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  box-shadow: 0 1px 0 #e0e0e0;
+  font-size: 12px;
+  color: #333;
+  letter-spacing: 0.03em;
+}
+
+.stats-card h3 {
+  margin: 0 0 10px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 1.2px;
+  color: #111;
+}
+
+.stats-muted {
+  color: #777;
+  font-size: 11px;
+}
+
+/* Graphs: reuse .graph-card from main.css */
+.statistics-graphs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  height: auto;
+  width: 100%;
+  max-width: 90%;
+}
+
+/* Keep graphs tidy inside the view */
+.statistics-graphs .graph-img {
+  max-height: 320px;
+  object-fit: contain;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }

@@ -125,7 +125,7 @@ This ensures:
 ### 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/karpovs-tracker.git
+git clone https://github.com/ItayKarp/karpovs-tracker.git
 cd karpovs-tracker
 ```
 

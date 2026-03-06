@@ -1,0 +1,50 @@
+<div id="profile-view" class="view">
+    <h2 class="profile-section-title">Account Details</h2>
+    <p class="profile-hint">Update your account information and click “Save Changes”</p>
+    <div id="profile-status" class="profile-status" style="display:none;"></div>
+    <div class="profile-card">
+        <div class="profile-grid">
+            <div>
+                <label>Full Name</label>
+                <input id="profile-name" type="text">
+            </div>
+            <div>
+                <label>Email</label>
+                <input id="profile-email" type="email">
+            </div>
+            <div>
+                <label>Salary</label>
+                <input id="profile-salary" type="number">
+            </div>
+        </div>
+        <button id="save-profile" class="primary-btn">Save Changes</button>
+        <hr class="profile-divider">
+
+      <!-- PASSWORD RESET -->
+        <h2 class="profile-section-title">Reset Password</h2>
+        <p class="profile-hint">
+            Click “Send Reset Link” to receive an email. Open the email link to set a new password.
+        </p>
+
+        <div id="profile-reset-status" class="profile-status" style="display:none;"></div>
+
+        <!-- hidden unless token exists -->
+        <div id="reset-fields" class="profile-grid" style="display:none;">
+            <div class="profile-field">
+                <label for="reset-password">New Password</label>
+                <input id="reset-password" type="password" placeholder="New password">
+            </div>
+
+            <div class="profile-field">
+                <label for="reset-confirm">Confirm Password</label>
+                <input id="reset-confirm" type="password" placeholder="Confirm password">
+            </div>
+        </div>
+
+        <div class="profile-actions">
+        <!-- Match Save Changes design -->
+        <button id="profile-reset-btn" class="primary-btn">Send Reset Link</button>
+        </div>
+
+    </div>
+</div>

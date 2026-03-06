@@ -1,0 +1,352 @@
+/* ── MONITOR SCREEN OVERLAY ────────────────────────────── */
+.screen-overlay {
+    position: fixed;
+    top: 38.5%;
+    left: 34%;
+    width: 32%;
+    height: 50%;
+    background: radial-gradient(ellipse at 45% 40%, #021a08 0%, #010d04 55%, #000800 100%);
+    border-radius: 8% / 10%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 4.5% 5.5% 3.5% 6%;
+    overflow: hidden;
+    animation: flicker 9s infinite;
+    z-index: 50;
+}
+
+/* Phosphor inner glow */
+.screen-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 40% 35%, rgba(0,255,65,0.05) 0%, transparent 65%);
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+/* Scanlines on screen */
+.screen-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.15) 3px,
+        rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 10;
+}
+
+/* ── TERMINAL CONTENT ──────────────────────────────────── */
+.terminal {
+    position: relative;
+    width: 100%;
+    z-index: 5;
+    color: var(--green);
+}
+
+.terminal-header {
+    font-family: 'VT323', monospace;
+    font-size: clamp(11px, 1.3vw, 16px);
+    color: var(--green-dim);
+    text-shadow: 0 0 6px var(--green-glow);
+    margin-bottom: 0.4em;
+    letter-spacing: 0.05em;
+    opacity: 0;
+    animation: fadeIn 0.4s ease forwards 0.3s;
+}
+
+.terminal-header span { opacity: 0.6; }
+
+.form-title {
+    font-family: 'VT323', monospace;
+    font-size: clamp(18px, 2.2vw, 28px);
+    color: var(--green);
+    text-shadow: 0 0 14px var(--green-glow), 0 0 28px rgba(0,255,65,0.25);
+    margin-bottom: 0.5em;
+    letter-spacing: 0.12em;
+    opacity: 0;
+    animation: fadeIn 0.4s ease forwards 0.6s;
+}
+
+.cursor {
+    animation: blink 1s step-end infinite;
+    font-size: 0.85em;
+    margin-left: 3px;
+}
+
+/* ── AUTH FORMS ────────────────────────────────────────── */
+.auth-form {
+    display: none;
+    flex-direction: column;
+    gap: 0.45em;
+}
+
+.auth-form.active {
+    display: flex;
+    opacity: 0;
+    animation: fadeIn 0.35s ease forwards 0.85s;
+}
+
+.field-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: clamp(9px, 0.95vw, 12px);
+}
+
+.field-row .prompt {
+    color: var(--green-dim);
+    text-shadow: 0 0 5px var(--green-glow);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.auth-form input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(0,255,65,0.3);
+    outline: none;
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(9px, 0.95vw, 12px);
+    width: 100%;
+    padding: 2px 4px;
+    caret-color: var(--green);
+    text-shadow: 0 0 5px var(--green-glow);
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.auth-form input::placeholder { color: rgba(0,255,65,0.22); }
+.auth-form input:focus {
+    border-bottom-color: var(--green);
+    background: rgba(0,255,65,0.04);
+}
+
+/* ── STATUS LINE ───────────────────────────────────────── */
+.status-line {
+    font-size: clamp(8px, 0.8vw, 10px);
+    min-height: 1em;
+    color: #ff4141;
+    text-shadow: 0 0 6px rgba(255,65,65,0.5);
+    letter-spacing: 0.05em;
+}
+
+.status-line.ok {
+    color: var(--green);
+    text-shadow: 0 0 6px var(--green-glow);
+}
+
+/* ── SUBMIT BUTTON ─────────────────────────────────────── */
+.btn-submit {
+    margin-top: 0.3em;
+    background: transparent;
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-family: 'VT323', monospace;
+    font-size: clamp(13px, 1.4vw, 18px);
+    padding: 0.15em 1em;
+    cursor: pointer;
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 8px var(--green-glow);
+    box-shadow: 0 0 8px rgba(0,255,65,0.12);
+    transition: all 0.15s;
+    align-self: flex-start;
+}
+
+.btn-submit:hover {
+    background: rgba(0,255,65,0.1);
+    border-color: var(--green);
+    box-shadow: 0 0 16px rgba(0,255,65,0.3);
+}
+
+.btn-submit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── TOGGLE ROW ────────────────────────────────────────── */
+.toggle-row {
+    margin-top: 0.35em;
+    font-size: clamp(8px, 0.8vw, 10px);
+    color: rgba(0,255,65,0.45);
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    flex-wrap: wrap;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    text-shadow: 0 0 5px var(--green-glow);
+    padding: 0;
+    transition: text-shadow 0.2s;
+}
+
+.toggle-btn:hover { text-shadow: 0 0 12px var(--green); }
+
+/* ── STATS BUTTON (legacy) ─────────────────────────────── */
+.stats-button {
+    position: fixed;
+    bottom: 3vh;
+    right: 3vw;
+    background: rgba(20, 15, 10, 0.85);
+    color: #d4af37;
+    border: 2px solid #8b7355;
+    padding: 12px 24px;
+    font-family: 'Georgia', serif;
+    font-size: 16px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+    outline: none;
+}
+
+.stats-button:hover {
+    background: rgba(30, 25, 20, 0.95);
+    color: #f4d03f;
+    border-color: #d4af37;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.8);
+}
+
+.stats-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+
+/* ── POST-SIGNUP PANEL ─────────────────────────────────── */
+#post-signup {
+    display: none;
+    width: 100%;
+}
+
+#post-signup.ps-visible {
+    display: block;
+    opacity: 0;
+    animation: fadeIn 0.4s ease forwards;
+}
+
+#post-signup .terminal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+}
+
+#post-signup h1 {
+    font-family: 'VT323', monospace;
+    font-size: clamp(16px, 1.9vw, 24px);
+    color: var(--green);
+    text-shadow: 0 0 14px var(--green-glow), 0 0 28px rgba(0,255,65,0.25);
+    letter-spacing: 0.12em;
+    margin-bottom: 0.2em;
+}
+
+#post-signup h1 span {
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.4);
+}
+
+#post-signup p {
+    font-size: clamp(8px, 0.8vw, 10px);
+    color: rgba(0,255,65,0.6);
+    letter-spacing: 0.05em;
+}
+
+#new-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+    margin-top: 0.5em;
+}
+
+#balance-p {
+    font-size: clamp(8px, 0.8vw, 10px) !important;
+    color: var(--green-dim) !important;
+    text-shadow: 0 0 5px var(--green-glow);
+    border-left: 2px solid var(--green-dim);
+    padding-left: 5px;
+    margin-bottom: 0.1em;
+}
+
+#new-details input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(0,255,65,0.3);
+    outline: none;
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(9px, 0.95vw, 12px);
+    width: 100%;
+    padding: 2px 4px;
+    caret-color: var(--green);
+    text-shadow: 0 0 5px var(--green-glow);
+    transition: border-color 0.2s, background 0.2s;
+}
+
+#new-details input::placeholder { color: rgba(0,255,65,0.22); }
+#new-details input:focus {
+    border-bottom-color: var(--green);
+    background: rgba(0,255,65,0.04);
+}
+
+/* Hide number spinner on balance input */
+#balance::-webkit-inner-spin-button,
+#balance::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+#balance { -moz-appearance: textfield; }
+
+#new-details-status {
+    font-size: clamp(8px, 0.8vw, 10px);
+    min-height: 1em;
+    color: #ff4141;
+    text-shadow: 0 0 6px rgba(255,65,65,0.5);
+    letter-spacing: 0.05em;
+}
+
+#new-details-status.ok {
+    color: var(--green);
+    text-shadow: 0 0 6px var(--green-glow);
+}
+
+/* ── FORGOT PASSWORD PANEL FIX ─────────────────────────── */
+#forgot-reset-wrap {
+    display: none;              /* JS toggles to flex */
+    flex-direction: column;     /* IMPORTANT: stops the one-row layout */
+    gap: 0.45em;                /* match .auth-form spacing */
+    width: 100%;
+}
+
+/* keep the email row consistent */
+#forgot-reset-wrap .field-row {
+    width: 100%;
+}
+
+/* keep button from drifting */
+#forgot-reset-wrap .btn-submit {
+    align-self: flex-start;
+    margin-top: 0.3em;
+}
+
+/* "Back to login" should sit nicely under the button */
+#forgot-reset-wrap .toggle-row {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 0.15em;
+    gap: 0.35em;
+}

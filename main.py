@@ -16,7 +16,6 @@ templates = Jinja2Templates(directory="templates")
 
 app = FastAPI(
     title="Expenses Tracking API",
-    root_path="/projects/Expense-Tracker",
     version="1.0",
     docs_url="/administrator123"
 )

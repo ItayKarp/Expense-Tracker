@@ -1,0 +1,56 @@
+<div id="statistics-view" class="view">
+  <div class="view-header">
+    <div>
+      <h1>Statistics</h1>
+      <p class="subtitle">Your financial overview.</p>
+    </div>
+  </div>
+
+  <div class="statistics-content">
+    <div class="stats-grid">
+      <!-- LEFT: text/insights -->
+      <div class="stats-panel">
+        <div class="stats-card" id="stats-snapshot"></div>
+        <div class="stats-card" id="stats-projection"></div>
+        <div class="stats-card" id="stats-categories"></div>
+        <div class="stats-card" id="stats-trend"></div>
+      </div>
+
+      <!-- RIGHT: graphs (PNG from API) -->
+      <div id="statistics-graphs" class="statistics-graphs">
+        <div class="graph-card">
+          <div class="graph-card-header">
+            <div class="graph-title">INCOME_VS_EXPENSES</div>
+            <div class="graph-subtitle">last 12 months</div>
+          </div>
+          <div class="graph-body">
+            <div class="graph-status" id="income-expenses-graph-status">Loading...</div>
+            <img id="income-expenses-img" class="graph-img" alt="Income vs Expenses graph" />
+          </div>
+        </div>
+
+        <div class="graph-card">
+          <div class="graph-card-header">
+            <div class="graph-title">EXPENSES_BY_CATEGORY</div>
+            <div class="graph-subtitle">this month</div>
+          </div>
+          <div class="graph-body">
+            <div class="graph-status" id="category-graph-status">Loading...</div>
+            <img id="category-img" class="graph-img" alt="Expenses by Category graph" />
+          </div>
+        </div>
+
+        <div class="graph-card">
+          <div class="graph-card-header">
+            <div class="graph-title">EXPENSES_BY_MONTH</div>
+            <div class="graph-subtitle">last 12 months</div>
+          </div>
+          <div class="graph-body">
+            <div class="graph-status" id="months-graph-status">Loading...</div>
+            <img id="months-img" class="graph-img" alt="Expenses by Month graph" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

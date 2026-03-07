@@ -1,6 +1,7 @@
 from pathlib import Path
 from fastapi import FastAPI
 from api import authentication_router, dashboard_router, statistics_router
+from fastapi.middleware.cors import CORSMiddleware
 
 
 # Resolve plots dir relative to this file, so save and serve use the same path
@@ -12,7 +13,19 @@ PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(
     title="Expenses Tracking API",
     version="1.0",
+    root_path="/",
     docs_url="/administrator123"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://www.itaykarpov.com",
+        "https://itaykarpov.com",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
